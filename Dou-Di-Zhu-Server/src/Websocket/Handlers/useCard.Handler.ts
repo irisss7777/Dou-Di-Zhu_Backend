@@ -1,0 +1,76 @@
+﻿import { CustomWebSocket, WSMessage, MessageType } from '../webtypes';
+import { WebSocketServer } from 'ws';
+import { logger } from '../../utils/logger';
+import { lobbyHandler } from '../../lobby/lobby';
+import  { broadcastToAll } from '../../utils/broadcast'
+import { Card } from "../../cards/cardSystem";
+
+
+export const handleUseCard = async (
+    ws: CustomWebSocket,
+    message: WSMessage,
+    wss: WebSocketServer,
+) => {
+    const {Data} = message;
+
+    const lobbyResult = await lobbyHandler.getPlayerLobby(ws.userId);
+    var lobbyId = lobbyResult?.getLobbyId();
+    var can: boolean = false;
+
+    if (lobbyResult != undefined) {
+
+        var cards: Card[] = Data.Cards;
+        can = lobbyResult.canUseCards(ws.userId, cards);
+        if(can){
+
+            lobbyResult.tryUseCards(ws.userId, cards);
+
+            if(cards != undefined)
+                lobbyResult?.getPlayerInfo(ws.userId)?.removeCard(cards);
+            
+            var cardCount = lobbyResult?.getCardCount(ws.userId);
+
+            const response: WSMessage = {
+                Type: MessageType.USE_CARD,
+                Data: {
+                    UserId: ws.userId,
+                    UserName: ws.userName,
+                    LobbyId: lobbyId,
+                    Used: true,
+                    Cards: cards,
+                    CardsCount: cardCount,
+                },
+            };
+
+            var jsonResponse = JSON.stringify(response);
+            ws.send(jsonResponse);
+
+            const broadcastMessage: WSMessage = {
+                Type: MessageType.USE_CARD_OTHER,
+                Data: {
+                    UserId: "",
+                    UserName: ws.userName,
+                    LobbyId: lobbyId,
+                    Cards: cards,
+                    CardsCount: cardCount,
+                },
+            };
+
+            broadcastToAll(wss, broadcastMessage, ws, lobbyId);
+        }
+        else {
+            const response: WSMessage = {
+                Type: MessageType.USE_CARD,
+                Data: {
+                    UserId: ws.userId,
+                    UserName: ws.userName,
+                    LobbyId: lobbyId,
+                    Used: false,
+                },
+            };
+
+            var jsonResponse = JSON.stringify(response);
+            ws.send(jsonResponse);
+        }
+    }
+}
