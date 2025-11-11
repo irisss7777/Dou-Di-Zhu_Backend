@@ -426,6 +426,6 @@ class LobbyHandler {
     }
 }
 
-const lobbyHandler = new LobbyHandler(1);
+const lobbyHandler = new LobbyHandler(3);
 
 export { lobbyHandler, PlayerInfo };
