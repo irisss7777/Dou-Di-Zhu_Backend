@@ -3,7 +3,7 @@ import { logger } from './utils/logger';
 import { WebSocketService } from "./Websocket/websocketService";
 
 const app = express();
-const PORT = 3000;
+const PORT = 3001;
 
 const server = app.listen(PORT, () => 
 {
