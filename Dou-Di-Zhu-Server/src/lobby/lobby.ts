@@ -226,6 +226,10 @@ class LobbyService {
                 const playerName = this.connectedPlayers[index].getName();
                 this.connectedPlayers.splice(index, 1);
                 this.currentPlayerLobbyCount--;
+                
+                if(this.currentPlayerLobbyCount <= 0)
+                    lobbyHandler.cleanupEmptyLobbies();
+                
                 logger.info(`Player ${playerId} (${playerName}) disconnected from lobby ${this.lobbyId}. Count: ${this.currentPlayerLobbyCount}/${this.maxPlayerLobbyCount}`);
                 return true;
             }

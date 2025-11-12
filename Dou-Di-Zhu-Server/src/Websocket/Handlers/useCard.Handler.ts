@@ -79,8 +79,6 @@ export const handleUseCard = async (
                         lobbyResult.disconnectPlayer(customClient.userId);
                     }
                 });
-
-                lobbyHandler.cleanupEmptyLobbies();
             }
             
 
