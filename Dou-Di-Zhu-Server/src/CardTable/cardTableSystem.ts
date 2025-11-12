@@ -5,6 +5,25 @@ import { logger } from "../utils/logger";
 export class CardTable {
     private cardsTableHandles: CardTableHandle[] = [];
 
+    public getTableState(): TableState {
+        const playerStates: PlayerTableState[] = this.cardsTableHandles.map(handle => ({
+            playerId: handle.getPlayerInfo().getId(),
+            playerName: handle.getPlayerInfo().getName(),
+            cards: handle.getCards().map(card => ({
+                value: card.getValue(),
+                suit: card.getSuit(),
+                numericValue: card.getNumericValue()
+            })),
+            cardCount: handle.getCards().length
+        }));
+
+        return {
+            totalCardsOnTable: this.cardsTableHandles.reduce((sum, handle) => sum + handle.getCards().length, 0),
+            players: playerStates,
+            lastUpdate: new Date().toISOString()
+        };
+    }
+
     public canAddCardHandle(playerInfo: PlayerInfo, cards: any[]): boolean {
         const cardInstances = cards.map(cardData =>
             new Card(cardData.CardValue, cardData.CardSuit)
@@ -405,4 +424,23 @@ export class CardCombination {
         public rank: number,
         public cards: Card[]
     ) {}
+}
+
+export interface TableState {
+    totalCardsOnTable: number;
+    players: PlayerTableState[];
+    lastUpdate: string;
+}
+
+export interface PlayerTableState {
+    playerId: string;
+    playerName: string;
+    cards: TableCard[];
+    cardCount: number;
+}
+
+export interface TableCard {
+    value: CardValueType;
+    suit: CardsSuitType;
+    numericValue: number;
 }

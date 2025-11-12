@@ -36,6 +36,31 @@ export function startAPIServer(port: number = 3002) {
         }
     });
 
+    app.get('/api/lobbies/:lobbyId/table', async (req, res) => {
+        try {
+            const lobbyId = req.params.lobbyId;
+            const tableState = await lobbyHandler.getLobbyTableState(lobbyId);
+
+            if (!tableState) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'Lobby not found'
+                });
+            }
+
+            res.json({
+                success: true,
+                data: tableState
+            });
+        } catch (error) {
+            logger.error('API Error getting table state:', error);
+            res.status(500).json({
+                success: false,
+                error: 'Internal server error'
+            });
+        }
+    });
+
     app.get('/api/stats', (req, res) => {
         res.json({
             success: true,

@@ -4,7 +4,7 @@ import { logger } from '../utils/logger';
 import { getConnectedUsersCount, broadcastToAll } from '../utils/broadcast';
 import {Card, CardHolder } from "../cards/cardSystem";
 import { handleStartMove } from  "../Websocket/Handlers/startMove.handler"
-import { CardTable } from "../CardTable/cardTableSystem";
+import { CardTable, TableState } from "../CardTable/cardTableSystem";
 
 class Mutex {
     private locked = false;
@@ -289,6 +289,10 @@ class LobbyService {
         return this.currentPlayerLobbyCount === 0;
     }
 
+    public getTableState(): TableState {
+        return this.cardTable.getTableState();
+    }
+
     public getPlayerInfo(playerId: string): PlayerInfo | null {
         const player = this.connectedPlayers.find(player => player.getId() === playerId);
         return player || null;
@@ -398,6 +402,20 @@ class LobbyHandler {
                 playerIds: lobby.getAllPlayerIds(),
                 playerNames: lobby.getAllPlayerNames()
             }));
+        } finally {
+            this.connectMutex.release();
+        }
+    }
+
+    public getLobbyById(lobbyId: string): LobbyService | null {
+        return this.allLobby.find(lobby => lobby.getLobbyId() === lobbyId) || null;
+    }
+
+    public async getLobbyTableState(lobbyId: string): Promise<TableState | null> {
+        await this.connectMutex.acquire();
+        try {
+            const lobby = this.getLobbyById(lobbyId);
+            return lobby ? lobby.getTableState() : null;
         } finally {
             this.connectMutex.release();
         }
