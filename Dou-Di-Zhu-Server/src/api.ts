@@ -31,6 +31,7 @@ export function startAPIServer(port: number = 3002) {
             logger.error('API Error getting lobby info:', error);
             res.status(500).json({
                 success: false,
+                
                 error: 'Internal server error'
             });
         }

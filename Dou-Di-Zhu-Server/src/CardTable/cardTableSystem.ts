@@ -56,6 +56,8 @@ export class CardTable {
             new Card(cardData.CardValue, cardData.CardSuit)
         );
 
+        this.clearHandle(playerInfo);
+
         const newHandle = new CardTableHandle(playerInfo, cardInstances);
         this.cardsTableHandles.push(newHandle);
     }
