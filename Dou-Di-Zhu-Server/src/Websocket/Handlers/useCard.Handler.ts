@@ -41,6 +41,34 @@ export const handleUseCard = async (
                     CardsCount: cardCount,
                 },
             };
+            
+            if(cardCount == 0){
+                const responseWin: WSMessage = {
+                    Type: MessageType.GAME_STATE,
+                    Data: {
+                        UserId: ws.userId,
+                        UserName: ws.userName,
+                        LobbyId: lobbyId,
+                        Win: true,
+                    },
+                };
+
+                var jsonResponseWin = JSON.stringify(responseWin);
+                ws.send(jsonResponseWin);
+
+                const broadcastMessageLose: WSMessage = {
+                    Type: MessageType.GAME_STATE,
+                    Data: {
+                        UserId: ws.userId,
+                        UserName: ws.userName,
+                        LobbyId: lobbyId,
+                        Win: false,
+                    },
+                };
+
+                broadcastToAll(wss, broadcastMessageLose, ws, lobbyId);
+            }
+            
 
             var jsonResponse = JSON.stringify(response);
             ws.send(jsonResponse);
