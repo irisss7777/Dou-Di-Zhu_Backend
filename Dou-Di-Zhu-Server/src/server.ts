@@ -1,6 +1,7 @@
 ﻿import express from 'express';
 import { logger } from './utils/logger';
 import { WebSocketService } from "./Websocket/websocketService";
+import { startAPIServer } from './api';
 
 const app = express();
 const PORT = 3001;
@@ -11,6 +12,12 @@ const server = app.listen(PORT, () =>
 });
 
 const webSocketService = new WebSocketService(server);
+
+
+if(process.env.API_PORT != undefined){
+    const API_PORT = +process.env.API_PORT || 3002;
+    startAPIServer(API_PORT);
+}
 
 function Shutdown() 
 {
