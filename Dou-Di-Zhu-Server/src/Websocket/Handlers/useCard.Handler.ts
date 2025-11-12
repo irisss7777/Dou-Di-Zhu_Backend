@@ -67,6 +67,20 @@ export const handleUseCard = async (
                 };
 
                 broadcastToAll(wss, broadcastMessageLose, ws, lobbyId);
+
+                wss.clients.forEach((client) => {
+                    if (client.readyState === client.OPEN) {
+                        const customClient = client as CustomWebSocket;
+
+                        if (lobbyResult && customClient.lobbyId !== lobbyResult.getLobbyId()) {
+                            return;
+                        }
+
+                        lobbyResult.disconnectPlayer(customClient.userId);
+                    }
+                });
+
+                lobbyHandler.cleanupEmptyLobbies();
             }
             
 
