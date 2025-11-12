@@ -13,11 +13,7 @@ const server = app.listen(PORT, () =>
 
 const webSocketService = new WebSocketService(server);
 
-
-if(process.env.API_PORT != undefined){
-    const API_PORT = +process.env.API_PORT || 3002;
-    startAPIServer(API_PORT);
-}
+startAPIServer();
 
 function Shutdown() 
 {
