@@ -99,13 +99,15 @@ class LobbyService {
     private currentPlayerNumber : number = 0;
     private canccelation = false;
     private cardTable : CardTable;
+    private lobbyHandle : LobbyHandler;
 
-    constructor(maxPlayerLobbyCount: number) {
+    constructor(maxPlayerLobbyCount: number, lobbyHandle : LobbyHandler) {
         this.lobbyId = this.generateLobbyId();
         this.maxPlayerLobbyCount = maxPlayerLobbyCount;
         this.currentPlayerLobbyCount = 0;
         this.cardHolder.initHolder();
         this.cardTable = new CardTable();
+        this.lobbyHandle = lobbyHandle;
     }
     
     public startGame()
@@ -228,7 +230,7 @@ class LobbyService {
                 this.currentPlayerLobbyCount--;
                 
                 if(this.currentPlayerLobbyCount <= 0)
-                    lobbyHandler.cleanupEmptyLobbies();
+                    this.lobbyHandle.cleanupEmptyLobbies();
                 
                 logger.info(`Player ${playerId} (${playerName}) disconnected from lobby ${this.lobbyId}. Count: ${this.currentPlayerLobbyCount}/${this.maxPlayerLobbyCount}`);
                 return true;
@@ -320,7 +322,7 @@ class LobbyHandler {
                 }
             }
 
-            const newLobby = new LobbyService(this.defaultMaxPlayers);
+            const newLobby = new LobbyService(this.defaultMaxPlayers, this);
             this.allLobby.push(newLobby);
 
             if (await newLobby.tryConnectPlayer(playerId, playerName, ws, wss)) {

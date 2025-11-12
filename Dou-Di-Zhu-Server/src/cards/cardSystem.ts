@@ -168,53 +168,58 @@ export class CardHolder
     }
 }
 
-export class Card
-{
-    private CardValue : CardValueType;
-    private CardSuit : CardsSuitType;
-    
-    constructor(valueType : CardValueType, suit : CardsSuitType) {
-        
+export class Card {
+    private CardValue: CardValueType;
+    private CardSuit: CardsSuitType;
+
+    constructor(valueType: CardValueType, suit: CardsSuitType) {
         this.CardValue = valueType;
         this.CardSuit = suit;
     }
-    
-    public getValue() : CardValueType{
-        
-        return  this.CardValue;
+
+    public getValue(): CardValueType {
+        return this.CardValue;
     }
 
-    public getSuit() : CardsSuitType{
-        
-        return  this.CardSuit;
+    public getSuit(): CardsSuitType {
+        return this.CardSuit;
+    }
+
+    public getNumericValue(): number {
+        return this.CardValue;
+    }
+
+    public isJoker(): boolean {
+        return this.CardValue === CardValueType.Joker;
+    }
+
+    public isTwo(): boolean {
+        return this.CardValue === CardValueType.Two;
     }
 }
 
-export enum CardValueType
-{
-    Three,
-    Four,
-    Five,
-    Six,
-    Seven,
-    Eight,
-    Nine,
-    Ten,
-    Jack,
-    Queen,
-    King,
-    Ace,
-    Two,
-    Joker
+export enum CardValueType {
+    Three = 0,
+    Four = 1,
+    Five = 2,
+    Six = 3,
+    Seven = 4,
+    Eight = 5,
+    Nine = 6,
+    Ten = 7,
+    Jack = 8,
+    Queen = 9,
+    King = 10,
+    Ace = 11,
+    Two = 12,
+    Joker = 13
 }
 
-export enum CardsSuitType
-{
-    Hearts,
-    Diamonds,
-    Spades,
-    Clubs,
-    
-    Black,
-    Red
+export enum CardsSuitType {
+    Hearts = 0,
+    Diamonds = 1,
+    Spades = 2,
+    Clubs = 3,
+    Black = 4,
+    Red = 5
 }
