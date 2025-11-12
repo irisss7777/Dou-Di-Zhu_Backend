@@ -102,6 +102,16 @@ export class WebSocketService
                 userId: ws.userId,
                 error: error.message
             });
+        
+        const message : WSMessage = {
+            Type: MessageType.ERROR,
+            Data: {
+                Message: Error
+            }
+        }
+
+        var jsonResponse = JSON.stringify(message);
+        ws.send(jsonResponse);
     }
 
     private Disconnect()

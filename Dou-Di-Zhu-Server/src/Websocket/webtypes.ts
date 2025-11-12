@@ -13,6 +13,7 @@ export enum MessageType {
     ADD_CARD = 'ADD_CARD',
     PLAYER_PASS = 'PLAYER_PASS',
     GAME_STATE = 'GAME_STATE',
+    ERROR = 'ERROR',
 }
 
 export interface WSMessage {
