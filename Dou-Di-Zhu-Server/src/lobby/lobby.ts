@@ -355,6 +355,10 @@ class LobbyService {
     private generateLobbyId(): string {
         return `Lobby_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     }
+    
+    public getHasLandLord() : boolean{
+        return this.hasLandLord;
+    }
 }
 
 class LobbyHandler {
@@ -421,7 +425,10 @@ class LobbyHandler {
     public userPass(playerId: string) : void{
         for (const lobby of this.allLobby) {
             if (lobby.hasPlayer(playerId)) {
-                lobby.pass(playerId);
+                if(lobby.getHasLandLord())
+                    lobby.pass(playerId);
+                else 
+                    lobby.passRaiseByPlayer(playerId);
             }
         }
     }
