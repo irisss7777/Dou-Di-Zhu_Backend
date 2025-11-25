@@ -6,6 +6,8 @@ export enum MessageType {
     USER_LEAVE = 'USER_LEAVE',
     ALL_USER_INFO = 'ALL_USER_INFO',
     GAME_MOVE = 'GAME_MOVE',
+    RAISE_BIT = 'RAISE_BIT',
+    BIT_RAISED = 'BIT_RAISED',
     USER_PASS = 'USER_PASS',
     CAN_USE_CARD = 'CAN_USE_CARD',
     USE_CARD = 'USE_CARD',

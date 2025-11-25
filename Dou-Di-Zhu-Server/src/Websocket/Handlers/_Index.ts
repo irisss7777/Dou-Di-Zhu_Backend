@@ -7,6 +7,7 @@ import { handleGameState } from './game.handler';
 import { handleUserPass } from './pass.handler';
 import { handleCanUseCard } from './canUseCard.handler';
 import { handleUseCard } from "./useCard.Handler";
+import { handleBitIsRaised } from "./bitIsRaised.handler";
 
 export type MessageHandler = (
     ws: CustomWebSocket,
@@ -21,6 +22,7 @@ const messageHandlers: Record<string, MessageHandler> = {
     [MessageType.USER_PASS]: handleUserPass,
     [MessageType.CAN_USE_CARD]: handleCanUseCard,
     [MessageType.USE_CARD]: handleUseCard,
+    [MessageType.BIT_RAISED]: handleBitIsRaised,
 };
 
 export const handleWebSocketMessage = (

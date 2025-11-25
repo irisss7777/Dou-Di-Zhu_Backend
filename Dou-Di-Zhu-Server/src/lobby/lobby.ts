@@ -5,6 +5,7 @@ import { getConnectedUsersCount, broadcastToAll } from '../utils/broadcast';
 import {Card, CardHolder } from "../cards/cardSystem";
 import { handleStartMove } from  "../Websocket/Handlers/startMove.handler"
 import { CardTable, TableState } from "../CardTable/cardTableSystem";
+import { handleRaiseBit } from "../Websocket/Handlers/raiseBit.handle";
 
 class Mutex {
     private locked = false;
@@ -40,13 +41,16 @@ class PlayerInfo {
     private wss: WebSocketServer;
     private skin : number;
     private cards: Card[] = [];
+    private bitCount : number;
+    private isLandLord : boolean = false;
 
-    constructor(playerId: string, playerName: string, ws: CustomWebSocket, wss: WebSocketServer, skin = 0) {
+    constructor(playerId: string, playerName: string, ws: CustomWebSocket, wss: WebSocketServer, skin = 0, bitCount = 0) {
         this.playerId = playerId;
         this.playerName = playerName;
         this.ws = ws;
         this.wss = wss;
         this.skin = skin;
+        this.bitCount = bitCount;
     }
 
     public getId(): string {
@@ -86,6 +90,15 @@ class PlayerInfo {
     public getCardCount() : number{
         return this.cards.length;
     }
+
+    public raiseBit(currentBit : number) : void{
+        this.bitCount = currentBit;
+    }
+
+    public setLandlordStatus() : void{
+        this.isLandLord = true;
+        this.skin = 2;
+    }
 }
 
 class LobbyService {
@@ -100,6 +113,9 @@ class LobbyService {
     private canccelation = false;
     private cardTable : CardTable;
     private lobbyHandle : LobbyHandler;
+    private hasLandLord = false;
+    private currentBit = 0;
+    private currentBitPassed = 0;
 
     constructor(maxPlayerLobbyCount: number, lobbyHandle : LobbyHandler) {
         this.lobbyId = this.generateLobbyId();
@@ -153,16 +169,18 @@ class LobbyService {
         
         return 0;
     }
-    
+
     private async waitForNextMove(playerInfo : PlayerInfo)
     {
         var currentTickCount = 0;
-        
+        var isRaised = false;
+
         while (currentTickCount < this.moveTime){
             currentTickCount++
-            
+
             if(this.canccelation){
                 this.canccelation = false;
+                isRaised = true;
                 break;
             }
 
@@ -174,19 +192,55 @@ class LobbyService {
                 },
             };
 
-            handleStartMove(playerInfo.getWs(), message, playerInfo.getWss(), currentTickCount, this.moveTime);
+            if(this.hasLandLord){
+                handleStartMove(playerInfo.getWs(), message, playerInfo.getWss(), currentTickCount, this.moveTime);
+            }
+            else {
+                handleRaiseBit(playerInfo.getWs(), message, playerInfo.getWss(), currentTickCount, this.moveTime, this.currentBit);
+            }
 
             await this.delay(1000);
         }
 
         this.currentPlayerNumber++;
 
+        if(!isRaised)
+            this.passRaiseBit(playerInfo.getId());
+
         if(this.currentPlayerNumber >=  this.connectedPlayers.length)
             this.currentPlayerNumber = 0;
-        
+
         this.startGame();
     }
-    
+
+    public raiseBit(playerId : string) : void{
+        this.currentBitPassed = 0;
+
+        this.currentBit += 20;
+
+        const player = this.connectedPlayers.find(player => player.getId() === playerId);
+        player?.raiseBit(this.currentBit);
+
+        this.pass(playerId);
+    }
+
+    public passRaiseByPlayer(playerId : string) : void{
+        this.canccelation = true;
+        this.passRaiseBit(playerId);
+    }
+
+    private passRaiseBit(playerId : string) : void{
+        this.currentBitPassed++;
+
+        if(this.currentBitPassed >= 2){
+            this.hasLandLord = true;
+
+            const player = this.connectedPlayers.find(player => player.getId() === playerId);
+            player?.setLandlordStatus();
+        }
+    }
+
+
     public pass(playerId : string) : void{
         if(this.connectedPlayers[this.currentPlayerNumber].getId() == playerId)
             this.canccelation = true;
