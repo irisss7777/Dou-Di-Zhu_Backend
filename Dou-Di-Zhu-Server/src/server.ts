@@ -11,7 +11,7 @@ const server = app.listen(PORT, () =>
     logger.info(`Server started on - ${PORT} url`);
 });
 
-const webSocketService = new WebSocketService(server);
+const webSocketService = new WebSocketService(server + "/");
 
 startAPIServer();
 
