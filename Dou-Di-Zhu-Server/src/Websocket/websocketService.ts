@@ -15,7 +15,7 @@ export class WebSocketService
         this.wss = new WebSocketServer(
         {
                 server,
-                path: '/ws'
+                path: '/ws/'
         });
 
         this.setupEventHandlers();
