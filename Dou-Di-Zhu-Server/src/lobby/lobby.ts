@@ -6,6 +6,7 @@ import {Card, CardHolder } from "../cards/cardSystem";
 import { handleStartMove } from  "../Websocket/Handlers/startMove.handler"
 import { CardTable, TableState } from "../CardTable/cardTableSystem";
 import { handleRaiseBit } from "../Websocket/Handlers/raiseBit.handle";
+import { handleChangeSkin } from "../Websocket/Handlers/changeSkin.handler";
 
 class Mutex {
     private locked = false;
@@ -40,16 +41,18 @@ class PlayerInfo {
     private ws: CustomWebSocket;
     private wss: WebSocketServer;
     private skin : number;
+    private landlordSkin : number;
     private cards: Card[] = [];
     private bitCount : number;
     private isLandLord : boolean = false;
 
-    constructor(playerId: string, playerName: string, ws: CustomWebSocket, wss: WebSocketServer, skin = 0, bitCount = 0) {
+    constructor(playerId: string, playerName: string, ws: CustomWebSocket, wss: WebSocketServer, skin = 0, landlordSkin = 2, bitCount = 0) {
         this.playerId = playerId;
         this.playerName = playerName;
         this.ws = ws;
         this.wss = wss;
         this.skin = skin;
+        this.landlordSkin = landlordSkin;
         this.bitCount = bitCount;
     }
 
@@ -70,7 +73,8 @@ class PlayerInfo {
     }
     
     public getSkin() : number{
-        return  this.skin;
+        var skin = this.isLandLord ? this.landlordSkin : this.skin;
+        return  skin;
     }
     
     public addCard(cards : Card[]) : void{
@@ -237,7 +241,22 @@ class LobbyService {
 
             const player = this.connectedPlayers.find(player => player.getId() === playerId);
             player?.setLandlordStatus();
+            
+            this.onLandlordSetted();
         }
+    }
+    
+    private onLandlordSetted() : void{
+        this.getAllPlayers().forEach((playerInfo) => {
+            const message : WSMessage = {
+                Type: MessageType.CHANGE_SKIN,
+                Data: {
+                    Skin: playerInfo.getSkin(),
+                }
+            }
+
+            handleChangeSkin(playerInfo.getWs(), message, playerInfo.getWss())
+        });
     }
 
 

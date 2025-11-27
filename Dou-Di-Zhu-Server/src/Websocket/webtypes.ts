@@ -14,6 +14,7 @@ export enum MessageType {
     USE_CARD_OTHER = 'USE_CARD_OTHER',
     ADD_CARD = 'ADD_CARD',
     PLAYER_PASS = 'PLAYER_PASS',
+    CHANGE_SKIN = 'CHANGE_SKIN',
     GAME_STATE = 'GAME_STATE',
     ERROR = 'ERROR',
 }
