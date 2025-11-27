@@ -98,6 +98,10 @@ class PlayerInfo {
     public raiseBit(currentBit : number) : void{
         this.bitCount = currentBit;
     }
+    
+    public getBit() : number{
+        return this.bitCount;
+    }
 
     public setLandlordStatus() : void{
         this.isLandLord = true;
@@ -209,7 +213,7 @@ class LobbyService {
         this.currentPlayerNumber++;
 
         if(!isRaised && !this.hasLandLord)
-            this.passRaiseBit(playerInfo.getId());
+            this.passRaiseBit();
 
         if(this.currentPlayerNumber >=  this.connectedPlayers.length)
             this.currentPlayerNumber = 0;
@@ -230,19 +234,26 @@ class LobbyService {
 
     public passRaiseByPlayer(playerId : string) : void{
         this.pass(playerId);
-        this.passRaiseBit(playerId);
+        this.passRaiseBit();
     }
 
-    private passRaiseBit(playerId : string) : void{
+    private passRaiseBit(): void {
         this.currentBitPassed++;
 
-        if(this.currentBitPassed >= 2){
+        if (this.currentBitPassed >= 2) {
             this.hasLandLord = true;
-
-            const player = this.connectedPlayers.find(player => player.getId() === playerId);
-            player?.setLandlordStatus();
             
-            this.onLandlordSetted();
+            let landlordCandidate: PlayerInfo | null = null;
+            for (const player of this.connectedPlayers) {
+                if (!landlordCandidate || player.getBit() > landlordCandidate.getBit()) {
+                    landlordCandidate = player;
+                }
+            }
+
+            if (landlordCandidate) {
+                landlordCandidate.setLandlordStatus();
+                this.onLandlordSetted();
+            }
         }
     }
     

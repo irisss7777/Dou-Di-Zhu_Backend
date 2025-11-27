@@ -14,6 +14,7 @@ export const handleChangeSkin = async(
     logger.info('Change skin',
         {
             userId: ws.userId,
+            bit: Data.Skin,
         });
 
 
@@ -27,6 +28,7 @@ export const handleChangeSkin = async(
             UserName: ws.userName,
             LobbyId: lobbyId,
             Skin: Data.Skin,
+            Bit: lobbyResult?.getPlayerInfo(ws.userId)?.getBit(),
         },
     };
 
@@ -40,6 +42,7 @@ export const handleChangeSkin = async(
             UserName: ws.userName,
             LobbyId: lobbyId,
             Skin: Data.Skin,
+            Bit: lobbyResult?.getPlayerInfo(ws.userId)?.getBit(),
         },
     };
 
