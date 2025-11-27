@@ -15,6 +15,10 @@ export const handleCanUseCard = async (
 
     const lobbyResult = await lobbyHandler.getPlayerLobby(ws.userId);
     var lobbyId = lobbyResult?.getLobbyId();
+    
+    if(lobbyResult != undefined)
+        if(!lobbyResult.getHasLandLord())
+            return;
 
     var can: boolean = false;
     

@@ -225,7 +225,7 @@ class LobbyService {
     }
 
     public passRaiseByPlayer(playerId : string) : void{
-        this.canccelation = true;
+        this.pass(playerId);
         this.passRaiseBit(playerId);
     }
 
