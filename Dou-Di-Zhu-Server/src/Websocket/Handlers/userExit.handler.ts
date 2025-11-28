@@ -15,7 +15,7 @@ export const handleUserLeave = async(
         {
             userId: ws.userId,
         });
-
+    
     const lobbyResult= await lobbyHandler.disconnectPlayer(ws.userId);
     
     if(lobbyResult.lobbyId !+ undefined){
@@ -25,7 +25,8 @@ export const handleUserLeave = async(
                 UserId: ws.userId,
                 UserName: ws.userName,
                 LobbyPlayers: lobbyResult.lobby?.getPlayerCount() || 0,
-                MaxLobbyPlayers: lobbyResult.lobby?.getMaxPlayers() || 4
+                MaxLobbyPlayers: lobbyResult.lobby?.getMaxPlayers() || 4,
+                ExitForever: !lobbyResult?.lobby?.getLobbyStartedState(),
             },
         };
 

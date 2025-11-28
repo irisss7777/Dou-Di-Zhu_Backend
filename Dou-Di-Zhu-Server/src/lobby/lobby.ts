@@ -124,6 +124,7 @@ class LobbyService {
     private hasLandLord = false;
     private currentBit = 0;
     private currentBitPassed = 0;
+    private lobbyIsStarted = false;
 
     constructor(maxPlayerLobbyCount: number, lobbyHandle : LobbyHandler) {
         this.lobbyId = this.generateLobbyId();
@@ -292,7 +293,7 @@ class LobbyService {
                 logger.info(`Player ${playerId} (${playerName}) connected to lobby ${this.lobbyId}. Count: ${this.currentPlayerLobbyCount}/${this.maxPlayerLobbyCount}`);
                 
                 if(this.currentPlayerLobbyCount >= this.maxPlayerLobbyCount){
-                    
+                    this.lobbyIsStarted = true;
                 }
                 
                 return true;
@@ -335,6 +336,10 @@ class LobbyService {
 
     public getLobbyId(): string {
         return this.lobbyId;
+    }
+    
+    public getLobbyStartedState() : boolean{
+        return this.lobbyIsStarted;
     }
 
     public getAllPlayerIds(): string[] {
