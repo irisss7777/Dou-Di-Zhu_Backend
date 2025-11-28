@@ -284,6 +284,9 @@ class LobbyService {
 
     public async tryConnectPlayer(playerId: string, playerName: string, ws: CustomWebSocket, wss: WebSocketServer): Promise<boolean> {
         await this.lobbyMutex.acquire();
+        
+        if(this.lobbyIsStarted)
+            return false;
 
         try {
             if (this.currentPlayerLobbyCount < this.maxPlayerLobbyCount &&
