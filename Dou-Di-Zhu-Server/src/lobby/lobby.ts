@@ -125,6 +125,7 @@ class LobbyService {
     private currentBit = 0;
     private currentBitPassed = 0;
     private lobbyIsStarted = false;
+    private currentPlayer = 0;
 
     constructor(maxPlayerLobbyCount: number, lobbyHandle : LobbyHandler) {
         this.lobbyId = this.generateLobbyId();
@@ -292,7 +293,11 @@ class LobbyService {
             if (this.currentPlayerLobbyCount < this.maxPlayerLobbyCount &&
                 !this.connectedPlayers.some(player => player.getId() === playerId)) {
                 this.currentPlayerLobbyCount++;
-                this.connectedPlayers.push(new PlayerInfo(playerId, playerName, ws, wss));
+                
+                if(this.currentPlayer < 1)
+                    this.currentPlayer++;
+                
+                this.connectedPlayers.push(new PlayerInfo(playerId, playerName, ws, wss, this.currentPlayer));
                 logger.info(`Player ${playerId} (${playerName}) connected to lobby ${this.lobbyId}. Count: ${this.currentPlayerLobbyCount}/${this.maxPlayerLobbyCount}`);
                 
                 if(this.currentPlayerLobbyCount >= this.maxPlayerLobbyCount){
