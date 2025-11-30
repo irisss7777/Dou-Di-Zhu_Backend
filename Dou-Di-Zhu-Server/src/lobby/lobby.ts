@@ -294,15 +294,15 @@ class LobbyService {
                 !this.connectedPlayers.some(player => player.getId() === playerId)) {
                 this.currentPlayerLobbyCount++;
                 
-                if(this.currentPlayer < 1)
-                    this.currentPlayer++;
-                
                 this.connectedPlayers.push(new PlayerInfo(playerId, playerName, ws, wss, this.currentPlayer));
                 logger.info(`Player ${playerId} (${playerName}) connected to lobby ${this.lobbyId}. Count: ${this.currentPlayerLobbyCount}/${this.maxPlayerLobbyCount}`);
                 
                 if(this.currentPlayerLobbyCount >= this.maxPlayerLobbyCount){
                     this.lobbyIsStarted = true;
                 }
+
+                if(this.currentPlayer < 1)
+                    this.currentPlayer++;
                 
                 return true;
             }
