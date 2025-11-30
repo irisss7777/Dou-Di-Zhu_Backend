@@ -23,7 +23,8 @@ export const handleEmotionUse = async(
         Type: MessageType.EMOTION_USE,
         Data: {
             Emotion: Data.Emotion,
-            TargetPosition: Data.TargetPosition,
+            TargetPositionX: Data.TargetPositionX,
+            TargetPositionY: Data.TargetPositionY,
             UseName: Data.UseName,
             TargetName: Data.TargetName,
         },
@@ -36,7 +37,8 @@ export const handleEmotionUse = async(
         Type: MessageType.EMOTION_USE,
         Data: {
             Emotion: Data.Emotion,
-            TargetPosition: Data.TargetPosition,
+            TargetPositionX: Data.TargetPositionX,
+            TargetPositionY: Data.TargetPositionY,
             UseName: Data.UseName,
             TargetName: Data.TargetName,
         },
