@@ -16,6 +16,7 @@ export enum MessageType {
     PLAYER_PASS = 'PLAYER_PASS',
     CHANGE_SKIN = 'CHANGE_SKIN',
     GAME_STATE = 'GAME_STATE',
+    EMOTION_USE = 'EMOTION_USE',
     ERROR = 'ERROR',
 }
 
