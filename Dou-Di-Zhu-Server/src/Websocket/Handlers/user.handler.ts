@@ -26,6 +26,7 @@ export const handleUserJoin = async(
     });
 
     const lobbyResult = await lobbyHandler.tryConnectPlayer(ws.userId, Data.UserName, ws, wss);
+    var skin = lobbyResult.lobby?.getPlayerInfo(ws.userId)?.getSkin();
 
     if (!lobbyResult.success) {
         logger.error(`Failed to connect user ${ws.userId} to lobby`);
@@ -44,7 +45,7 @@ export const handleUserJoin = async(
             LobbyId: lobbyResult.lobbyId,
             LobbyPlayers: lobbyResult.lobby?.getPlayerCount() || 0,
             MaxLobbyPlayers: lobbyResult.lobby?.getMaxPlayers() || 4,
-            SkinNumber : lobbyResult.lobby?.getPlayerInfo(ws.userId)?.getSkin(),
+            SkinNumber : skin,
         },
     };
     
@@ -77,7 +78,7 @@ export const handleUserJoin = async(
             UserName: Data.UserName,
             LobbyPlayers: lobbyResult.lobby?.getPlayerCount() || 0,
             MaxLobbyPlayers: lobbyResult.lobby?.getMaxPlayers() || 4,
-            SkinNumber : lobbyResult.lobby?.getPlayerInfo(Data.UserId)?.getSkin(),
+            SkinNumber : skin,
         },
     };
     
