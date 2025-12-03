@@ -3,6 +3,7 @@ import { WebSocketServer } from 'ws';
 import { logger } from '../../utils/logger';
 import { lobbyHandler } from '../../lobby/lobby';
 import { Card } from "../../cards/cardSystem";
+import { broadcastToAll } from "../../utils/broadcast";
 
 export const handleAddCard = async (
     ws: CustomWebSocket,
@@ -37,7 +38,6 @@ export const handleAddCard = async (
                         UserName: customClient.userName,
                         LobbyId: lobbyId,
                         CardData: cards,
-                        CardsCount: cardsCount,
                     },
                 };
 
@@ -51,6 +51,16 @@ export const handleAddCard = async (
 
                 var jsonResponse = JSON.stringify(response);
                 client.send(jsonResponse);
+
+                const broadcastMessage: WSMessage = {
+                    Type: MessageType.CARD_COUNT,
+                    Data: {
+                        UserName: ws.userName,
+                        CardsCount: cardsCount,
+                    },
+                };
+
+                broadcastToAll(wss, broadcastMessage, ws, lobbyId);
             }
         }
     });
