@@ -24,6 +24,7 @@ export const handleAddCard = async (
             }
 
             var cards = lobbyResult?.getCardHolder().getRandomCards(cardCount);
+            var cardsCount = lobbyResult?.getCardCount(ws.userId);
             
             if(cards != undefined && cards?.length > 0){
                 const response: WSMessage = {
@@ -33,6 +34,7 @@ export const handleAddCard = async (
                         UserName: customClient.userName,
                         LobbyId: lobbyId,
                         CardData: cards,
+                        CardsCount: cardsCount,
                     },
                 };
 

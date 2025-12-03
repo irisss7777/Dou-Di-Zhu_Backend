@@ -7,6 +7,7 @@ import { handleStartMove } from  "../Websocket/Handlers/startMove.handler"
 import { CardTable, TableState } from "../CardTable/cardTableSystem";
 import { handleRaiseBit } from "../Websocket/Handlers/raiseBit.handle";
 import { handleChangeSkin } from "../Websocket/Handlers/changeSkin.handler";
+import { handleAddCard } from "../Websocket/Handlers/addCard.handler";
 
 class Mutex {
     private locked = false;
@@ -253,6 +254,13 @@ class LobbyService {
             }
 
             if (landlordCandidate) {
+                const message : WSMessage = {
+                    Type: MessageType.ADD_CARD,
+                    Data: {
+                    }
+                }
+                
+                handleAddCard(landlordCandidate.getWs(), message, landlordCandidate.getWss(), 3);
                 landlordCandidate.setLandlordStatus();
                 this.onLandlordSetted();
             }
