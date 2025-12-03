@@ -27,8 +27,8 @@ export const handleAddCard = async (
             var cards = lobbyResult?.getCardHolder().getRandomCards(cardCount);
             var cardsCount = cardCount;
             
-            if(lobbyResult?.getCardCount(ws.userId) != undefined)
-                cardsCount += lobbyResult?.getCardCount(ws.userId);
+            if(lobbyResult?.getCardCount(customClient.userId) != undefined)
+                cardsCount += lobbyResult?.getCardCount(customClient.userId);
             
             if(cards != undefined && cards?.length > 0){
                 const response: WSMessage = {
@@ -52,15 +52,18 @@ export const handleAddCard = async (
                 var jsonResponse = JSON.stringify(response);
                 client.send(jsonResponse);
 
-                const broadcastMessage: WSMessage = {
+                const cardResponse: WSMessage = {
                     Type: MessageType.CARD_COUNT,
                     Data: {
-                        UserName: ws.userName,
+                        UserName: customClient.userName,
                         CardsCount: cardsCount,
                     },
                 };
 
-                broadcastToAll(wss, broadcastMessage, ws, lobbyId);
+                var jsonResponseCards = JSON.stringify(cardResponse);
+                client.send(jsonResponseCards);
+
+                broadcastToAll(wss, cardResponse, ws, lobbyId);
             }
         }
     });
