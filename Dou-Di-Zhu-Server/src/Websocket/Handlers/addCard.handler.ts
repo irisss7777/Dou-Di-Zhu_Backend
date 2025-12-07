@@ -5,6 +5,8 @@ import { lobbyHandler } from '../../lobby/lobby';
 import { Card } from "../../cards/cardSystem";
 import { broadcastToAll } from "../../utils/broadcast";
 
+
+
 export const handleAddCard = async (
     ws: CustomWebSocket,
     message: WSMessage,
@@ -15,6 +17,8 @@ export const handleAddCard = async (
 
     const lobbyResult = await lobbyHandler.getPlayerLobby(ws.userId);
     var lobbyId = lobbyResult?.getLobbyId();
+    
+    await new Promise(resolve => setTimeout(resolve, 10));
 
     wss.clients.forEach((client) => {
         if (client.readyState === client.OPEN) {
