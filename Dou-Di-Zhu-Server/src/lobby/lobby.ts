@@ -214,16 +214,12 @@ class LobbyService {
             await this.delay(1000);
         }
 
-        if(!isRaised && !this.hasLandLord)
-        {
-            const passMessage: WSMessage = {
-                Type: MessageType.PLAYER_PASS,
-                Data: {
-                },
-            };
-
-            handleUserPass(playerInfo.getWs(), passMessage, playerInfo.getWss());
-        }
+        const passMessage: WSMessage = {
+            Type: MessageType.PLAYER_PASS,
+            Data: {
+            },
+        };
+        handleUserPass(playerInfo.getWs(), passMessage, playerInfo.getWss());
 
         this.currentPlayerNumber++;
 
@@ -254,21 +250,34 @@ class LobbyService {
 
         if (this.currentBitPassed >= 2) {
             this.hasLandLord = true;
-            
+
             let landlordCandidate: PlayerInfo | null = null;
+
+            let allZeroBits = true;
             for (const player of this.connectedPlayers) {
-                if (!landlordCandidate || player.getBit() > landlordCandidate.getBit()) {
-                    landlordCandidate = player;
+                if (player.getBit() > 0) {
+                    allZeroBits = false;
+                    break;
+                }
+            }
+
+            if (allZeroBits) {
+                landlordCandidate = this.connectedPlayers[0] || null;
+            } else {
+                for (const player of this.connectedPlayers) {
+                    if (!landlordCandidate || player.getBit() > landlordCandidate.getBit()) {
+                        landlordCandidate = player;
+                    }
                 }
             }
 
             if (landlordCandidate) {
-                const message : WSMessage = {
+                const message: WSMessage = {
                     Type: MessageType.ADD_CARD,
                     Data: {
                     }
                 }
-                
+
                 handleAddCard(landlordCandidate.getWs(), message, landlordCandidate.getWss(), 3);
                 landlordCandidate.setLandlordStatus();
                 this.onLandlordSetted();
