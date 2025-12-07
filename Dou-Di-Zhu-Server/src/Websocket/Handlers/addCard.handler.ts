@@ -35,6 +35,12 @@ export const handleAddCard = async (
             },
         };
 
+        if(cards != undefined)
+            lobbyResult?.getPlayerInfo(ws.userId)?.addCard(cards);
+
+        var jsonResponse = JSON.stringify(response);
+        ws.send(jsonResponse);
+
         var cardsCount = cardCount;
 
         if(lobbyResult?.getCardCount(ws.userId) != undefined)
