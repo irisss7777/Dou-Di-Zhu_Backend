@@ -41,16 +41,11 @@ export const handleAddCard = async (
         var jsonResponse = JSON.stringify(response);
         ws.send(jsonResponse);
 
-        var cardsCount = cardCount;
-
-        if(lobbyResult?.getCardCount(ws.userId) != undefined)
-            cardsCount += lobbyResult?.getCardCount(ws.userId);
-
         const cardResponse: WSMessage = {
             Type: MessageType.CARD_COUNT,
             Data: {
                 UserName: ws.userName,
-                CardsCount: cardsCount,
+                CardsCount: lobbyResult?.getCardCount(ws.userId),
             },
         };
 
