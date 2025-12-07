@@ -93,7 +93,7 @@ export class CardTable {
             cards: handle ? handle.getCards() : undefined
         };
     }
-
+    
     private getCombination(cards: Card[]): CardCombination | null {
         if (cards.length === 0) return null;
 

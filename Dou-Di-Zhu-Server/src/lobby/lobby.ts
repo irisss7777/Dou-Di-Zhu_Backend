@@ -119,6 +119,7 @@ class LobbyService {
     private lobbyMutex = new Mutex();
     private cardHolder = new CardHolder();
     private moveTime : number = 15.0;
+    private cantMoveTime : number = 4.0;
     private currentPlayerNumber : number = 0;
     private canccelation = false;
     private cardTable : CardTable;
@@ -128,6 +129,7 @@ class LobbyService {
     private currentBitPassed = 0;
     private lobbyIsStarted = false;
     private currentPlayer = 0;
+    private lobbyIsActive = true;
 
     constructor(maxPlayerLobbyCount: number, lobbyHandle : LobbyHandler) {
         this.lobbyId = this.generateLobbyId();
@@ -136,6 +138,10 @@ class LobbyService {
         this.cardHolder.initHolder();
         this.cardTable = new CardTable();
         this.lobbyHandle = lobbyHandle;
+    }
+    
+    public destroyLobby(): void{
+        this.lobbyIsActive = false;
     }
     
     public startGame()
@@ -184,52 +190,61 @@ class LobbyService {
 
     private async waitForNextMove(playerInfo : PlayerInfo)
     {
-        var currentTickCount = 0;
-        var isRaised = false;
+        var waitPlayerInfo = playerInfo;
+        
+        while(this.lobbyIsActive){
+            var currentTickCount = 0;
+            var isRaised = false;
 
-        while (currentTickCount < this.moveTime){
-            currentTickCount++
+            while (currentTickCount < this.moveTime){
+                currentTickCount++
 
-            if(this.canccelation){
-                this.canccelation = false;
-                isRaised = true;
-                break;
-            }
+                if(this.canccelation){
+                    this.canccelation = false;
+                    isRaised = true;
+                    break;
+                }
 
-            const message: WSMessage = {
-                Type: MessageType.NEW_USER_JOIN,
-                Data: {
-                    UserId: playerInfo.getId(),
-                    UserName: playerInfo.getName(),
-                },
-            };
-
-            if(this.hasLandLord){
-                handleStartMove(playerInfo.getWs(), message, playerInfo.getWss(), currentTickCount, this.moveTime);
-            }
-            else {
-                handleRaiseBit(playerInfo.getWs(), message, playerInfo.getWss(), currentTickCount, this.moveTime, this.currentBit);
-            }
-
-            await this.delay(1000);
-            
-            if(currentTickCount >= this.moveTime - 1)
-            {
-                const passMessage: WSMessage = {
-                    Type: MessageType.PLAYER_PASS,
+                const message: WSMessage = {
+                    Type: MessageType.NEW_USER_JOIN,
                     Data: {
+                        UserId: waitPlayerInfo.getId(),
+                        UserName: waitPlayerInfo.getName(),
                     },
                 };
-                handleUserPass(playerInfo.getWs(), passMessage, playerInfo.getWss());
+
+                if(this.hasLandLord){
+                    handleStartMove(waitPlayerInfo.getWs(), message, waitPlayerInfo.getWss(), currentTickCount, this.moveTime);
+                }
+                else {
+                    handleRaiseBit(waitPlayerInfo.getWs(), message, waitPlayerInfo.getWss(), currentTickCount, this.moveTime, this.currentBit);
+                }
+
+                await this.delay(1000);
+
+                if(currentTickCount >= this.moveTime - 1)
+                {
+                    const passMessage: WSMessage = {
+                        Type: MessageType.PLAYER_PASS,
+                        Data: {
+                        },
+                    };
+                    handleUserPass(waitPlayerInfo.getWs(), passMessage, waitPlayerInfo.getWss());
+                }
             }
+
+            this.currentPlayerNumber++;
+
+            if(this.currentPlayerNumber >=  this.connectedPlayers.length)
+                this.currentPlayerNumber = 0;
+
+            var currentPlayer = undefined;
+            if(this.connectedPlayers[this.currentPlayerNumber] != undefined)
+                currentPlayer = this.connectedPlayers[this.currentPlayerNumber];
+
+            if(currentPlayer != undefined)
+                waitPlayerInfo = currentPlayer;
         }
-
-        this.currentPlayerNumber++;
-
-        if(this.currentPlayerNumber >=  this.connectedPlayers.length)
-            this.currentPlayerNumber = 0;
-
-        this.startGame();
     }
 
     public raiseBit(playerId : string) : void{
@@ -416,6 +431,9 @@ class LobbyService {
     }
 
     public isEmpty(): boolean {
+        if(this.currentPlayerLobbyCount == 0 && this.lobbyIsActive)
+            this.destroyLobby
+        
         return this.currentPlayerLobbyCount === 0;
     }
 
