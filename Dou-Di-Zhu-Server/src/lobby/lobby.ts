@@ -96,6 +96,10 @@ class PlayerInfo {
     public getCardCount() : number{
         return this.cards.length;
     }
+    
+    public getAllCards() : Card[]{
+        return this.cards;
+    }
 
     public raiseBit(currentBit : number) : void{
         this.bitCount = currentBit;
@@ -177,6 +181,16 @@ class LobbyService {
         }
         
         return false;
+    }
+    
+    public tryGetBestCombination(playerId : string) : Card[] | null{
+        var playerInfo = this.getPlayerInfo(playerId);
+        
+        if(playerInfo){
+            return this.cardTable.hasValidCombination(playerInfo.getAllCards(), playerInfo);
+        }
+        
+        return null;
     }
     
     public getCardCount(playerId : string) : number{

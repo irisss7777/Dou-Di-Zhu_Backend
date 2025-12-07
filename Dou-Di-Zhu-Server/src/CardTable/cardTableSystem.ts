@@ -51,6 +51,86 @@ export class CardTable {
         return true;
     }
 
+    public hasValidCombination(cards: Card[], playerInfo: PlayerInfo): Card[] | null {
+        if (!cards.length) return null;
+
+        const sortedCards = [...cards].sort((a, b) => b.getValue() - a.getValue());
+        
+        var hastExistCombination = true;
+
+        if (this.cardsTableHandles.length > 0) {
+            for (const handle of this.cardsTableHandles) {
+                if (handle.getPlayerInfo().getId() === playerInfo.getId()) {
+                    continue;
+                }
+
+                const existingCombination = this.getCombination(handle.getCards());
+
+                if (!existingCombination) continue;
+
+                hastExistCombination = false;
+                
+                if (existingCombination.type === CombinationType.Single) {
+                    for (const card of sortedCards) {
+                        if (card.getValue() > existingCombination.rank) {
+                            return [card];
+                        }
+                    }
+                }
+                
+                else if (existingCombination.type === CombinationType.Pair) {
+                    const groups = this.groupByValue(sortedCards);
+
+                    for (const [value, group] of groups) {
+                        if (group.length >= 2 && value > existingCombination.rank) {
+                            return [group[0], group[1]];
+                        }
+                    }
+                }
+                
+                else if (existingCombination.type === CombinationType.Triple) {
+                    const groups = this.groupByValue(sortedCards);
+
+                    for (const [value, group] of groups) {
+                        if (group.length >= 3 && value > existingCombination.rank) {
+                            return [group[0], group[1], group[2]];
+                        }
+                    }
+                }
+                
+                else if (existingCombination.type === CombinationType.SingleBomb) {
+                    const groups = this.groupByValue(sortedCards);
+
+                    for (const [value, group] of groups) {
+                        if (group.length >= 4 && value > existingCombination.rank) {
+                            return [group[0], group[1], group[2], group[3]];
+                        }
+                    }
+                }
+            }
+        }
+        
+        if(hastExistCombination)
+            return [cards[0]];
+
+        return null;
+    }
+
+    private getCombination(cards: Card[]): CardCombination | null {
+        if (cards.length === 0) return null;
+
+        const sortedCards = [...cards].sort((a, b) => this.getCardRank(a) - this.getCardRank(b));
+
+        if (this.isRocket(sortedCards)) {
+            return new CardCombination(CombinationType.Rocket, 16, sortedCards);
+        }
+
+        const bomb = this.checkBombCombinations(sortedCards);
+        if (bomb) return bomb;
+
+        return this.checkNormalCombinations(sortedCards);
+    }
+
     public addCard(playerInfo: PlayerInfo, cards: any[]): void {
         const cardInstances = cards.map(cardData =>
             new Card(cardData.CardValue, cardData.CardSuit)
@@ -84,7 +164,7 @@ export class CardTable {
             handle.getPlayerInfo().getId() === playerInfo.getId()
         );
     }
-
+    
     public getCards(playerInfo: PlayerInfo): { cards?: Card[] } {
         const handle = this.cardsTableHandles.find(handle =>
             handle.getPlayerInfo().getId() === playerInfo.getId()
@@ -92,21 +172,6 @@ export class CardTable {
         return {
             cards: handle ? handle.getCards() : undefined
         };
-    }
-    
-    private getCombination(cards: Card[]): CardCombination | null {
-        if (cards.length === 0) return null;
-
-        const sortedCards = [...cards].sort((a, b) => this.getCardRank(a) - this.getCardRank(b));
-
-        if (this.isRocket(sortedCards)) {
-            return new CardCombination(CombinationType.Rocket, 16, sortedCards);
-        }
-
-        const bomb = this.checkBombCombinations(sortedCards);
-        if (bomb) return bomb;
-
-        return this.checkNormalCombinations(sortedCards);
     }
 
     private isStronger(newComb: CardCombination, existingComb: CardCombination): boolean {

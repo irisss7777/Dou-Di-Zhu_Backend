@@ -9,6 +9,7 @@ import { handleCanUseCard } from './canUseCard.handler';
 import { handleUseCard } from "./useCard.Handler";
 import { handleBitIsRaised } from "./bitIsRaised.handler";
 import { handleEmotionUse } from "./emotionUse.Handler";
+import { handleBestCombination } from "./selectBestCombination.handler";
 
 export type MessageHandler = (
     ws: CustomWebSocket,
@@ -25,6 +26,7 @@ const messageHandlers: Record<string, MessageHandler> = {
     [MessageType.USE_CARD]: handleUseCard,
     [MessageType.BIT_RAISED]: handleBitIsRaised,
     [MessageType.EMOTION_USE]: handleEmotionUse,
+    [MessageType.SELECT_BEST_COMBINATION]: handleBestCombination,
 };
 
 export const handleWebSocketMessage = (
