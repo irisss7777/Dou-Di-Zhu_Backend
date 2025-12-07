@@ -46,19 +46,15 @@ export const handleAddCard = async (
         if(lobbyResult?.getCardCount(ws.userId) != undefined)
             cardsCount += lobbyResult?.getCardCount(ws.userId);
 
-        wss.clients.forEach((client) => {
-            if (client.readyState === client.OPEN) {
-                const customClient = client as CustomWebSocket;
+        const cardResponse: WSMessage = {
+            Type: MessageType.CARD_COUNT,
+            Data: {
+                UserName: ws.userName,
+                CardsCount: cardsCount,
+            },
+        };
 
-                if (lobbyResult && customClient.lobbyId !== lobbyResult.getLobbyId()) {
-                    return;
-                }
-                cardCountMessages.forEach(item => {
-                    const jsonResponseCards = JSON.stringify(item.message);
-                    client.send(jsonResponseCards);
-                });
-            }
-        });
+        broadcastToAll(wss, cardResponse, ws, lobbyId);
         
         return;
     }
