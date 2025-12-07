@@ -281,7 +281,7 @@ class LobbyService {
                     }
                 }
 
-                handleAddCard(landlordCandidate.getWs(), message, landlordCandidate.getWss(), 3);
+                handleAddCard(landlordCandidate.getWs(), message, landlordCandidate.getWss(), 3, true);
                 landlordCandidate.setLandlordStatus();
                 this.onLandlordSetted();
             }

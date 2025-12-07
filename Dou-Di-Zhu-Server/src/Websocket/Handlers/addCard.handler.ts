@@ -10,6 +10,7 @@ export const handleAddCard = async (
     message: WSMessage,
     wss: WebSocketServer,
     cardCount: number,
+    targetAdd = false,
 ) => {
     const { Data } = message;
 
@@ -21,6 +22,42 @@ export const handleAddCard = async (
         client: CustomWebSocket;
     }> = [];
 
+    if(targetAdd) {
+        var cards = lobbyResult?.getCardHolder().getRandomCards(cardCount);
+
+        const response: WSMessage = {
+            Type: MessageType.ADD_CARD,
+            Data: {
+                UserId: ws.userId,
+                UserName: ws.userName,
+                LobbyId: lobbyId,
+                CardData: cards,
+            },
+        };
+
+        var cardsCount = cardCount;
+
+        if(lobbyResult?.getCardCount(ws.userId) != undefined)
+            cardsCount += lobbyResult?.getCardCount(ws.userId);
+
+        wss.clients.forEach((client) => {
+            if (client.readyState === client.OPEN) {
+                const customClient = client as CustomWebSocket;
+
+                if (lobbyResult && customClient.lobbyId !== lobbyResult.getLobbyId()) {
+                    return;
+                }
+                cardCountMessages.forEach(item => {
+                    const jsonResponseCards = JSON.stringify(item.message);
+                    client.send(jsonResponseCards);
+                });
+            }
+        });
+        
+        return;
+    }
+        
+        
     wss.clients.forEach((client) => {
         if (client.readyState === client.OPEN) {
             const customClient = client as CustomWebSocket;
@@ -45,11 +82,6 @@ export const handleAddCard = async (
                         CardData: cards,
                     },
                 };
-
-                logger.debug('Card added to user', {
-                    userId: customClient.userId,
-                    gameState: response.Data
-                });
 
                 if(cards != undefined)
                     lobbyResult?.getPlayerInfo(customClient.userId)?.addCard(cards);
