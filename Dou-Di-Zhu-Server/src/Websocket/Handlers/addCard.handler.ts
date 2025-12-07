@@ -5,8 +5,6 @@ import { lobbyHandler } from '../../lobby/lobby';
 import { Card } from "../../cards/cardSystem";
 import { broadcastToAll } from "../../utils/broadcast";
 
-
-
 export const handleAddCard = async (
     ws: CustomWebSocket,
     message: WSMessage,
@@ -17,8 +15,11 @@ export const handleAddCard = async (
 
     const lobbyResult = await lobbyHandler.getPlayerLobby(ws.userId);
     var lobbyId = lobbyResult?.getLobbyId();
-    
-    await new Promise(resolve => setTimeout(resolve, 10));
+
+    const cardCountMessages: Array<{
+        message: WSMessage;
+        client: CustomWebSocket;
+    }> = [];
 
     wss.clients.forEach((client) => {
         if (client.readyState === client.OPEN) {
@@ -30,10 +31,10 @@ export const handleAddCard = async (
 
             var cards = lobbyResult?.getCardHolder().getRandomCards(cardCount);
             var cardsCount = cardCount;
-            
+
             if(lobbyResult?.getCardCount(customClient.userId) != undefined)
                 cardsCount += lobbyResult?.getCardCount(customClient.userId);
-            
+
             if(cards != undefined && cards?.length > 0){
                 const response: WSMessage = {
                     Type: MessageType.ADD_CARD,
@@ -49,7 +50,7 @@ export const handleAddCard = async (
                     userId: customClient.userId,
                     gameState: response.Data
                 });
-                
+
                 if(cards != undefined)
                     lobbyResult?.getPlayerInfo(customClient.userId)?.addCard(cards);
 
@@ -64,11 +65,25 @@ export const handleAddCard = async (
                     },
                 };
 
-                var jsonResponseCards = JSON.stringify(cardResponse);
-                client.send(jsonResponseCards);
-
-                broadcastToAll(wss, cardResponse, ws, lobbyId);
+                cardCountMessages.push({
+                    message: cardResponse,
+                    client: customClient
+                });
             }
+        }
+    });
+
+    wss.clients.forEach((client) => {
+        if (client.readyState === client.OPEN) {
+            const customClient = client as CustomWebSocket;
+
+            if (lobbyResult && customClient.lobbyId !== lobbyResult.getLobbyId()) {
+                return;
+            }
+            cardCountMessages.forEach(item => {
+                const jsonResponseCards = JSON.stringify(item.message);
+                client.send(jsonResponseCards);
+            });
         }
     });
 };
