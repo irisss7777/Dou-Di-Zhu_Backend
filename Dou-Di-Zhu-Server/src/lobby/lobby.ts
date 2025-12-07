@@ -212,14 +212,17 @@ class LobbyService {
             }
 
             await this.delay(1000);
+            
+            if(currentTickCount >= this.moveTime - 1)
+            {
+                const passMessage: WSMessage = {
+                    Type: MessageType.PLAYER_PASS,
+                    Data: {
+                    },
+                };
+                handleUserPass(playerInfo.getWs(), passMessage, playerInfo.getWss());
+            }
         }
-
-        const passMessage: WSMessage = {
-            Type: MessageType.PLAYER_PASS,
-            Data: {
-            },
-        };
-        handleUserPass(playerInfo.getWs(), passMessage, playerInfo.getWss());
 
         this.currentPlayerNumber++;
 
