@@ -216,7 +216,7 @@ class LobbyService {
         this.currentPlayerNumber++;
 
         if(!isRaised && !this.hasLandLord)
-            this.passRaiseBit();
+            this.passRaiseByPlayer(playerInfo.getId());
 
         if(this.currentPlayerNumber >=  this.connectedPlayers.length)
             this.currentPlayerNumber = 0;
