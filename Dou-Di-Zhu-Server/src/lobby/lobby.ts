@@ -8,6 +8,7 @@ import { CardTable, TableState } from "../CardTable/cardTableSystem";
 import { handleRaiseBit } from "../Websocket/Handlers/raiseBit.handle";
 import { handleChangeSkin } from "../Websocket/Handlers/changeSkin.handler";
 import { handleAddCard } from "../Websocket/Handlers/addCard.handler";
+import { handleUserPass } from "../Websocket/Handlers/pass.handler";
 
 class Mutex {
     private locked = false;
@@ -213,10 +214,18 @@ class LobbyService {
             await this.delay(1000);
         }
 
-        this.currentPlayerNumber++;
-
         if(!isRaised && !this.hasLandLord)
-            this.passRaiseByPlayer(playerInfo.getId());
+        {
+            const passMessage: WSMessage = {
+                Type: MessageType.PLAYER_PASS,
+                Data: {
+                },
+            };
+
+            handleUserPass(playerInfo.getWs(), passMessage, playerInfo.getWss());
+        }
+
+        this.currentPlayerNumber++;
 
         if(this.currentPlayerNumber >=  this.connectedPlayers.length)
             this.currentPlayerNumber = 0;
