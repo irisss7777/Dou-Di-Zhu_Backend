@@ -65,6 +65,7 @@ export const handleUserJoin = async(
             LobbyPlayers: lobbyResult.lobby?.getPlayerCount() || 0,
             MaxLobbyPlayers: lobbyResult.lobby?.getMaxPlayers() || 4,
             SkinNumber : lobbyResult.lobby?.getAllSkins(),
+            CardsCount : lobbyResult.lobby?.getAllCardsCount(),
         },
     };
 

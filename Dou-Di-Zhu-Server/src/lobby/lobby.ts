@@ -370,6 +370,10 @@ class LobbyService {
         return this.connectedPlayers.map(player => player.getSkin());
     }
 
+    public getAllCardsCount(): number[] {
+        return this.connectedPlayers.map(player => player.getCardCount());
+    }
+
     public getAllPlayers(): PlayerInfo[] {
         return [...this.connectedPlayers];
     }
