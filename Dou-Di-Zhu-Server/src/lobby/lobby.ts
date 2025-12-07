@@ -196,7 +196,7 @@ class LobbyService {
             var currentTickCount = 0;
             var isRaised = false;
 
-            while (currentTickCount < this.moveTime){
+            while (currentTickCount < this.moveTime && this.lobbyIsActive){
                 currentTickCount++
 
                 if(this.canccelation){
@@ -432,7 +432,7 @@ class LobbyService {
 
     public isEmpty(): boolean {
         if(this.currentPlayerLobbyCount == 0 && this.lobbyIsActive)
-            this.destroyLobby
+            this.destroyLobby();
         
         return this.currentPlayerLobbyCount === 0;
     }
