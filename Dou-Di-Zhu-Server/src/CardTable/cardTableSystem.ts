@@ -54,7 +54,7 @@ export class CardTable {
     public hasValidCombination(cards: Card[], playerInfo: PlayerInfo): Card[] | null {
         if (!cards.length) return null;
 
-        const sortedCards = [...cards].sort((a, b) => b.getValue() - a.getValue());
+        const sortedCards = [...cards].sort((a, b) => a.getValue() - b.getValue());
         
         var hastExistCombination = true;
 
@@ -111,7 +111,7 @@ export class CardTable {
         }
         
         if(hastExistCombination)
-            return [cards[0]];
+            return [sortedCards[0]];
 
         return null;
     }
