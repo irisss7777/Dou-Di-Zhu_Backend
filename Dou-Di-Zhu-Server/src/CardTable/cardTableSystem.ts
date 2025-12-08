@@ -59,17 +59,29 @@ export class CardTable {
         var hastExistCombination = true;
 
         if (this.cardsTableHandles.length > 0) {
+            var existingCombination : CardCombination | null = null;
+            
+            var maxValue = -1;
+            
             for (const handle of this.cardsTableHandles) {
                 if (handle.getPlayerInfo().getId() === playerInfo.getId()) {
                     continue;
                 }
 
-                const existingCombination = this.getCombination(handle.getCards());
+                var newExistingCombination = this.getCombination(handle.getCards());
 
-                if (!existingCombination) continue;
-
+                if (!newExistingCombination) {
+                    continue;
+                }
+                else if(newExistingCombination.rank > maxValue){
+                    maxValue = newExistingCombination.rank
+                    existingCombination = newExistingCombination;
+                }
+            }
+            
+            if(existingCombination) {
                 hastExistCombination = false;
-                
+
                 if (existingCombination.type === CombinationType.Single) {
                     for (const card of sortedCards) {
                         if (card.getValue() > existingCombination.rank) {
@@ -77,7 +89,7 @@ export class CardTable {
                         }
                     }
                 }
-                
+
                 else if (existingCombination.type === CombinationType.Pair) {
                     const groups = this.groupByValue(sortedCards);
 
@@ -87,7 +99,7 @@ export class CardTable {
                         }
                     }
                 }
-                
+
                 else if (existingCombination.type === CombinationType.Triple) {
                     const groups = this.groupByValue(sortedCards);
 
@@ -97,7 +109,7 @@ export class CardTable {
                         }
                     }
                 }
-                
+
                 else if (existingCombination.type === CombinationType.SingleBomb) {
                     const groups = this.groupByValue(sortedCards);
 
@@ -106,13 +118,13 @@ export class CardTable {
                             return [group[0], group[1], group[2], group[3]];
                         }
                     }
-                }
+                } 
             }
         }
         
         if(hastExistCombination)
             return [sortedCards[0]];
-
+        
         return null;
     }
 
