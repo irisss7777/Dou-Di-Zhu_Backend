@@ -60,8 +60,9 @@ export class CardTable {
 
         if (this.cardsTableHandles.length > 0) {
             var existingCombination : CardCombination | null = null;
-            
+
             var maxValue = -1;
+            var maxType = -1;
             
             for (const handle of this.cardsTableHandles) {
                 if (handle.getPlayerInfo().getId() === playerInfo.getId()) {
@@ -73,8 +74,14 @@ export class CardTable {
                 if (!newExistingCombination) {
                     continue;
                 }
-                else if(newExistingCombination.rank > maxValue){
+                else if(newExistingCombination.rank > maxValue && newExistingCombination.type == maxType){
                     maxValue = newExistingCombination.rank
+                    maxType = newExistingCombination.type;
+                    existingCombination = newExistingCombination;
+                }
+                else if(newExistingCombination.type > maxType){
+                    maxValue = newExistingCombination.rank
+                    maxType = newExistingCombination.type;
                     existingCombination = newExistingCombination;
                 }
             }
