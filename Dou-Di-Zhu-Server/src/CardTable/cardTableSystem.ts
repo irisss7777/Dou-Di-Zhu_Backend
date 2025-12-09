@@ -4,6 +4,7 @@ import { logger } from "../utils/logger";
 
 export class CardTable {
     private cardsTableHandles: CardTableHandle[] = [];
+    private combinationCache = new Map<string, CardCombination[]>();
 
     public getTableState(): TableState {
         const playerStates: PlayerTableState[] = this.cardsTableHandles.map(handle => ({
@@ -24,7 +25,7 @@ export class CardTable {
         };
     }
 
-    public canAddCardHandle(playerInfo: PlayerInfo, cards: any[], gameType : number): boolean {
+    public canAddCardHandle(playerInfo: PlayerInfo, cards: any[], gameType: number): boolean {
         const cardInstances = cards.map(cardData =>
             new Card(cardData.CardValue, cardData.CardSuit)
         );
@@ -51,13 +52,14 @@ export class CardTable {
         return true;
     }
 
-    // подсказки для валидных карт
+    //
+    
     public hasValidCombination(cards: Card[], playerInfo: PlayerInfo, gameType: number): Card[] | null {
         if (!cards.length) return null;
 
         const sortedCards = [...cards].sort((a, b) => this.getCardRank(a) - this.getCardRank(b));
 
-        const allCombinations = this.getAllPossibleCombinations(sortedCards, gameType);
+        const allCombinations = this.getCachedCombinations(sortedCards, gameType);
 
         if (this.cardsTableHandles.length === 0) {
             return this.getSmallestCombination(allCombinations);
@@ -85,7 +87,19 @@ export class CardTable {
 
         return this.findSmallestBeatingCombination(allCombinations, strongestTableCombination);
     }
-    
+
+    private getCachedCombinations(cards: Card[], gameType: number): CardCombination[] {
+        const key = cards.map(c => `${c.getValue()}-${c.getSuit()}`).sort().join('|') + `|${gameType}`;
+
+        if (this.combinationCache.has(key)) {
+            return this.combinationCache.get(key)!;
+        }
+
+        const combinations = this.getAllPossibleCombinations(cards, gameType);
+        this.combinationCache.set(key, combinations);
+        return combinations;
+    }
+
     private getAllPossibleCombinations(cards: Card[], gameType: number): CardCombination[] {
         const combinations: CardCombination[] = [];
 
@@ -163,31 +177,23 @@ export class CardTable {
 
     private addAdvancedCombinations(cards: Card[], combinations: CardCombination[]): void {
         this.addSimpleCombinations(cards, combinations);
-
-        const sortedCards = [...cards].sort((a, b) => this.getCardRank(a) - this.getCardRank(b));
-
-        this.addStraightCombinations(sortedCards, combinations);
-
-        this.addSequenceOfPairs(sortedCards, combinations);
-
-        this.addSequenceOfTriples(sortedCards, combinations);
-
-        this.addThreeWithOneCombinations(sortedCards, combinations);
-
-        this.addThreeWithPairCombinations(sortedCards, combinations);
-
-        this.addBombWithAttachments(sortedCards, combinations);
+        this.addStraightCombinations(cards, combinations);
+        this.addSequenceOfPairs(cards, combinations);
+        this.addSequenceOfTriples(cards, combinations);
+        this.addThreeWithOneCombinations(cards, combinations);
+        this.addThreeWithPairCombinations(cards, combinations);
+        this.addBombWithAttachments(cards, combinations);
+        this.addConsecutiveBombs(cards, combinations);
     }
 
     private addStraightCombinations(cards: Card[], combinations: CardCombination[]): void {
-
         const straightCards = cards.filter(card =>
             !card.isJoker() && this.getCardRank(card) < 13
         );
 
         const uniqueValues = Array.from(new Set(straightCards.map(c => this.getCardRank(c))))
             .sort((a, b) => a - b);
-        
+
         for (let start = 0; start < uniqueValues.length; start++) {
             for (let end = start + 4; end <= uniqueValues.length; end++) {
                 const sequence = uniqueValues.slice(start, end);
@@ -288,12 +294,13 @@ export class CardTable {
                 const sequenceCombinations: Card[][][] = [];
 
                 for (const rank of sequence) {
-                    const value = cards.find(c => this.getCardRank(c) === rank)?.getValue();
-                    if (!value) {
+                    const matchingCards = cards.filter(c => this.getCardRank(c) === rank);
+                    if (matchingCards.length < 3) {
                         isValid = false;
                         break;
                     }
 
+                    const value = matchingCards[0].getValue();
                     const group = groups.get(value);
                     if (!group || group.length < 3) {
                         isValid = false;
@@ -357,9 +364,9 @@ export class CardTable {
 
     private addThreeWithPairCombinations(cards: Card[], combinations: CardCombination[]): void {
         const groups = this.groupByValue(cards);
-        const sortedValues = Array.from(groups.keys()).sort((a, b) => a - b);
-        
         const triples: Array<{value: CardValueType, cards: Card[]}> = [];
+        const pairsByValue = new Map<CardValueType, Card[][]>();
+
         for (const [value, group] of groups) {
             if (group.length >= 3) {
                 for (let i = 0; i < group.length - 2; i++) {
@@ -373,10 +380,7 @@ export class CardTable {
                     }
                 }
             }
-        }
 
-        const pairsByValue = new Map<CardValueType, Card[][]>();
-        for (const [value, group] of groups) {
             if (group.length >= 2) {
                 const valuePairs: Card[][] = [];
                 for (let i = 0; i < group.length - 1; i++) {
@@ -387,19 +391,12 @@ export class CardTable {
                 pairsByValue.set(value, valuePairs);
             }
         }
-        
+
         for (const triple of triples) {
             for (const [pairValue, pairList] of pairsByValue) {
                 if (pairValue === triple.value) continue;
 
                 for (const pair of pairList) {
-                    const tripleCardIds = new Set(triple.cards.map(c => `${c.getValue()}-${c.getSuit()}`));
-                    const pairCardIds = new Set(pair.map(c => `${c.getValue()}-${c.getSuit()}`));
-
-                    if ([...tripleCardIds].some(id => pairCardIds.has(id))) {
-                        continue;
-                    }
-
                     const combinationCards = [...triple.cards, ...pair];
                     combinations.push(new CardCombination(
                         CombinationType.ThreeWithPair,
@@ -416,7 +413,6 @@ export class CardTable {
 
         for (const [value, group] of groups) {
             if (group.length >= 3) {
-
                 for (let i = 0; i < group.length - 2; i++) {
                     for (let j = i + 1; j < group.length - 1; j++) {
                         for (let k = j + 1; k < group.length; k++) {
@@ -435,6 +431,135 @@ export class CardTable {
                     }
                 }
             }
+        }
+    }
+
+    private addBombWithAttachments(cards: Card[], combinations: CardCombination[]): void {
+        const groups = this.groupByValue(cards);
+
+        for (const [bombValue, bombGroup] of groups) {
+            if (bombGroup.length >= 4) {
+                for (let i = 0; i < bombGroup.length - 3; i++) {
+                    for (let j = i + 1; j < bombGroup.length - 2; j++) {
+                        for (let k = j + 1; k < bombGroup.length - 1; k++) {
+                            for (let l = k + 1; l < bombGroup.length; l++) {
+                                const bomb = [bombGroup[i], bombGroup[j], bombGroup[k], bombGroup[l]];
+                                const bombCardIds = new Set(bomb.map(c => `${c.getValue()}-${c.getSuit()}`));
+
+                                const remainingCards = cards.filter(card =>
+                                    !bombCardIds.has(`${card.getValue()}-${card.getSuit()}`)
+                                );
+
+                                for (const singleCard of remainingCards) {
+                                    if (singleCard.getValue() !== bombValue) {
+                                        combinations.push(new CardCombination(
+                                            CombinationType.BombWithOne,
+                                            this.getCardRank(bomb[0]),
+                                            [...bomb, singleCard]
+                                        ));
+                                    }
+                                }
+
+                                const remainingGroups = this.groupByValue(remainingCards);
+                                const pairValues: CardValueType[] = [];
+
+                                for (const [value, group] of remainingGroups) {
+                                    if (value === bombValue) continue;
+                                    if (group.length >= 2) {
+                                        pairValues.push(value);
+                                    }
+                                }
+
+                                for (let m = 0; m < pairValues.length - 1; m++) {
+                                    for (let n = m + 1; n < pairValues.length; n++) {
+                                        const firstValue = pairValues[m];
+                                        const secondValue = pairValues[n];
+
+                                        const firstGroup = remainingGroups.get(firstValue)!;
+                                        const secondGroup = remainingGroups.get(secondValue)!;
+
+                                        for (let p1 = 0; p1 < firstGroup.length - 1; p1++) {
+                                            for (let p2 = p1 + 1; p2 < firstGroup.length; p2++) {
+                                                const firstPair = [firstGroup[p1], firstGroup[p2]];
+
+                                                for (let q1 = 0; q1 < secondGroup.length - 1; q1++) {
+                                                    for (let q2 = q1 + 1; q2 < secondGroup.length; q2++) {
+                                                        const secondPair = [secondGroup[q1], secondGroup[q2]];
+
+                                                        const allCards = [...bomb, ...firstPair, ...secondPair];
+                                                        const cardIds = allCards.map(c => `${c.getValue()}-${c.getSuit()}`);
+                                                        const uniqueIds = new Set(cardIds);
+
+                                                        if (uniqueIds.size === 8) {
+                                                            combinations.push(new CardCombination(
+                                                                CombinationType.BombWithTwoPairs,
+                                                                this.getCardRank(bomb[0]),
+                                                                allCards
+                                                            ));
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private addConsecutiveBombs(cards: Card[], combinations: CardCombination[]): void {
+        const groups = this.groupByValue(cards);
+        const bombs = Array.from(groups.entries())
+            .filter(([_, group]) => group.length >= 4)
+            .map(([value, group]) => ({
+                value,
+                rank: this.getCardRank(new Card(value, CardsSuitType.Hearts)),
+                cards: group.slice(0, 4)
+            }))
+            .sort((a, b) => a.rank - b.rank);
+
+        if (bombs.length < 2) return;
+
+        for (let start = 0; start < bombs.length; start++) {
+            for (let length = 2; length <= 5; length++) {
+                const end = start + length;
+                if (end > bombs.length) break;
+
+                const sequence = bombs.slice(start, end);
+
+                let isValid = true;
+                for (let i = 1; i < sequence.length; i++) {
+                    if (sequence[i].rank !== sequence[i-1].rank + 1) {
+                        isValid = false;
+                        break;
+                    }
+                }
+
+                if (isValid) {
+                    const bombType = this.getConsecutiveBombType(length);
+                    const allCards = sequence.flatMap(b => b.cards);
+
+                    combinations.push(new CardCombination(
+                        bombType,
+                        sequence[sequence.length - 1].rank,
+                        allCards
+                    ));
+                }
+            }
+        }
+    }
+
+    private getConsecutiveBombType(length: number): CombinationType {
+        switch(length) {
+            case 2: return CombinationType.DoubleBomb;
+            case 3: return CombinationType.TripleBomb;
+            case 4: return CombinationType.QuadrupleBomb;
+            case 5: return CombinationType.MaxBomb;
+            default: return CombinationType.SingleBomb;
         }
     }
 
@@ -468,7 +593,7 @@ export class CardTable {
         );
 
         if (beatingCombinations.length === 0) return null;
-        
+
         const sameType = beatingCombinations.filter(comb => comb.type === tableCombination.type);
         if (sameType.length > 0) {
             return sameType.sort((a, b) => a.rank - b.rank)[0].cards;
@@ -500,87 +625,10 @@ export class CardTable {
         };
         return strengths[type] || 0;
     }
-
-    private addBombWithAttachments(cards: Card[], combinations: CardCombination[]): void {
-        const groups = this.groupByValue(cards);
-
-        for (const [bombValue, bombGroup] of groups) {
-            if (bombGroup.length >= 4) {
-                for (let i = 0; i < bombGroup.length - 3; i++) {
-                    for (let j = i + 1; j < bombGroup.length - 2; j++) {
-                        for (let k = j + 1; k < bombGroup.length - 1; k++) {
-                            for (let l = k + 1; l < bombGroup.length; l++) {
-                                const bomb = [bombGroup[i], bombGroup[j], bombGroup[k], bombGroup[l]];
-                                const bombCardIds = new Set(bomb.map(c => `${c.getValue()}-${c.getSuit()}`));
-
-                                const remainingCards = cards.filter(card =>
-                                    !bombCardIds.has(`${card.getValue()}-${card.getSuit()}`)
-                                );
-
-                                for (const singleCard of remainingCards) {
-                                    if (singleCard.getValue() !== bombValue) {
-                                        combinations.push(new CardCombination(
-                                            CombinationType.BombWithOne,
-                                            this.getCardRank(bomb[0]),
-                                            [...bomb, singleCard]
-                                        ));
-                                    }
-                                }
-
-
-                                const remainingGroups = this.groupByValue(remainingCards);
-                                const pairValues: CardValueType[] = [];
-
-                                for (const [value, group] of remainingGroups) {
-                                    if (value === bombValue) continue;
-                                    if (group.length >= 2) {
-                                        pairValues.push(value);
-                                    }
-                                }
-
-                                for (let m = 0; m < pairValues.length - 1; m++) {
-                                    for (let n = m + 1; n < pairValues.length; n++) {
-                                        const firstValue = pairValues[m];
-                                        const secondValue = pairValues[n];
-
-                                        const firstGroup = remainingGroups.get(firstValue)!;
-                                        const secondGroup = remainingGroups.get(secondValue)!;
-
-                                        for (let p1 = 0; p1 < firstGroup.length - 1; p1++) {
-                                            for (let p2 = p1 + 1; p2 < firstGroup.length; p2++) {
-                                                const firstPair = [firstGroup[p1], firstGroup[p2]];
-
-                                                for (let q1 = 0; q1 < secondGroup.length - 1; q1++) {
-                                                    for (let q2 = q1 + 1; q2 < secondGroup.length; q2++) {
-                                                        const secondPair = [secondGroup[q1], secondGroup[q2]];
-
-                                                        const allCards = [...bomb, ...firstPair, ...secondPair];
-                                                        const cardIds = allCards.map(c => `${c.getValue()}-${c.getSuit()}`);
-                                                        const uniqueIds = new Set(cardIds);
-
-                                                        if (uniqueIds.size === 8) { 
-                                                            combinations.push(new CardCombination(
-                                                                CombinationType.BombWithTwoPairs,
-                                                                this.getCardRank(bomb[0]),
-                                                                allCards
-                                                            ));
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
+    
     //
 
-    private getCombination(cards: Card[], gameType : number): CardCombination | null {
+    private getCombination(cards: Card[], gameType: number): CardCombination | null {
         if (cards.length === 0) return null;
 
         const sortedCards = [...cards].sort((a, b) => this.getCardRank(a) - this.getCardRank(b));
@@ -628,7 +676,7 @@ export class CardTable {
             handle.getPlayerInfo().getId() === playerInfo.getId()
         );
     }
-    
+
     public getCards(playerInfo: PlayerInfo): { cards?: Card[] } {
         const handle = this.cardsTableHandles.find(handle =>
             handle.getPlayerInfo().getId() === playerInfo.getId()
@@ -673,13 +721,13 @@ export class CardTable {
             cards[0].getSuit() !== cards[1].getSuit();
     }
 
-    private checkBombCombinations(cards: Card[], gameType : number): CardCombination | null {
-        if(gameType == 0){
+    private checkBombCombinations(cards: Card[], gameType: number): CardCombination | null {
+        if (gameType == 0) {
             if (cards.length === 4 && this.allSameValue(cards)) {
                 return new CardCombination(CombinationType.SingleBomb, this.getCardRank(cards[0]), cards);
             }
         }
-        else if(gameType == 1){
+        else if (gameType == 1) {
             if (cards.length === 4 && this.allSameValue(cards)) {
                 return new CardCombination(CombinationType.SingleBomb, this.getCardRank(cards[0]), cards);
             }
@@ -710,8 +758,8 @@ export class CardTable {
         return null;
     }
 
-    private checkNormalCombinations(cards: Card[], gameType : number): CardCombination | null {
-        if(gameType == 0){
+    private checkNormalCombinations(cards: Card[], gameType: number): CardCombination | null {
+        if (gameType == 0) {
             if (cards.length === 1) {
                 return new CardCombination(CombinationType.Single, this.getCardRank(cards[0]), cards);
             }
@@ -724,7 +772,7 @@ export class CardTable {
                 return new CardCombination(CombinationType.Triple, this.getCardRank(cards[0]), cards);
             }
         }
-        if(gameType == 1){
+        if (gameType == 1) {
             if (cards.length === 1) {
                 return new CardCombination(CombinationType.Single, this.getCardRank(cards[0]), cards);
             }
