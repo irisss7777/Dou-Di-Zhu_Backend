@@ -122,7 +122,7 @@ class LobbyService {
     private connectedPlayers: PlayerInfo[] = [];
     private lobbyMutex = new Mutex();
     private cardHolder = new CardHolder();
-    private moveTime : number = 15.0;
+    private moveTime : number;
     private cantMoveTime : number = 4.0;
     private currentPlayerNumber : number = 0;
     private canccelation = false;
@@ -134,8 +134,11 @@ class LobbyService {
     private lobbyIsStarted = false;
     private currentPlayer = 0;
     private lobbyIsActive = true;
+    private gameType : number;
 
-    constructor(maxPlayerLobbyCount: number, lobbyHandle : LobbyHandler) {
+    constructor(maxPlayerLobbyCount: number, lobbyHandle: LobbyHandler, gameType: number) {
+        this.gameType = gameType;
+        this.moveTime = gameType == 0 ? 20 : 15;
         this.lobbyId = this.generateLobbyId();
         this.maxPlayerLobbyCount = maxPlayerLobbyCount;
         this.currentPlayerLobbyCount = 0;
@@ -165,7 +168,7 @@ class LobbyService {
     public tryUseCards(playerId : string, cards : Card[]) : void{
         var playerInfo = this.getPlayerInfo(playerId);
         if(playerInfo != undefined) {
-            if (this.cardTable.canAddCardHandle(playerInfo, cards)) {
+            if (this.cardTable.canAddCardHandle(playerInfo, cards, this.gameType)) {
                 this.cardTable.addCard(playerInfo, cards);
 
                 if(this.connectedPlayers[this.currentPlayerNumber].getId() == playerId)
@@ -177,7 +180,7 @@ class LobbyService {
     public canUseCards(playerId : string, cards : Card[]) : boolean{
         var playerInfo = this.getPlayerInfo(playerId);
         if(playerInfo != undefined) {
-            return this.cardTable.canAddCardHandle(playerInfo, cards);
+            return this.cardTable.canAddCardHandle(playerInfo, cards, this.gameType);
         }
         
         return false;
@@ -187,7 +190,7 @@ class LobbyService {
         var playerInfo = this.getPlayerInfo(playerId);
         
         if(playerInfo){
-            return this.cardTable.hasValidCombination(playerInfo.getAllCards(), playerInfo);
+            return this.cardTable.hasValidCombination(playerInfo.getAllCards(), playerInfo, this.gameType);
         }
         
         return null;
@@ -341,11 +344,14 @@ class LobbyService {
             this.cardTable.clearHandle(playerInfo);
     }
 
-    public async tryConnectPlayer(playerId: string, playerName: string, ws: CustomWebSocket, wss: WebSocketServer): Promise<boolean> {
+    public async tryConnectPlayer(playerId: string, playerName: string, ws: CustomWebSocket, wss: WebSocketServer, gameType : number): Promise<boolean> {
         await this.lobbyMutex.acquire();
 
         try {
             if(this.lobbyIsStarted)
+                return false;
+            
+            if(gameType != this.gameType)
                 return false;
             
             if (this.currentPlayerLobbyCount < this.maxPlayerLobbyCount &&
@@ -479,15 +485,12 @@ class LobbyHandler {
         this.defaultMaxPlayers = defaultMaxPlayers;
     }
 
-    public async tryConnectPlayer(playerId: string, playerName: string, ws: CustomWebSocket, wss: WebSocketServer): Promise<{ success: boolean; lobbyId?: string; lobby?: LobbyService }> {
+    public async tryConnectPlayer(playerId: string, playerName: string, gameType : number, ws: CustomWebSocket, wss: WebSocketServer): Promise<{ success: boolean; lobbyId?: string; lobby?: LobbyService }> {
         await this.connectMutex.acquire();
-
-        logger.info(`Player try connect`);
-            
 
         try {
             for (const lobby of this.allLobby) {
-                if (await lobby.tryConnectPlayer(playerId, playerName, ws, wss)) {
+                if (await lobby.tryConnectPlayer(playerId, playerName, ws, wss, gameType)) {
                     return {
                         success: true,
                         lobbyId: lobby.getLobbyId(),
@@ -496,10 +499,10 @@ class LobbyHandler {
                 }
             }
 
-            const newLobby = new LobbyService(this.defaultMaxPlayers, this);
+            const newLobby = new LobbyService(this.defaultMaxPlayers, this, gameType);
             this.allLobby.push(newLobby);
 
-            if (await newLobby.tryConnectPlayer(playerId, playerName, ws, wss)) {
+            if (await newLobby.tryConnectPlayer(playerId, playerName, ws, wss, gameType)) {
                 return {
                     success: true,
                     lobbyId: newLobby.getLobbyId(),

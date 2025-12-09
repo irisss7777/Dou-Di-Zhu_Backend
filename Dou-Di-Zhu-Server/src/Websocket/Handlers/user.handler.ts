@@ -12,6 +12,8 @@ export const handleUserJoin = async(
 ) => {
     const { Data } = message;
     
+    var gameType : number = Data.GameType;
+    
     if (!ws.userId) {
         ws.userId = generateUserId();
     }
@@ -25,7 +27,7 @@ export const handleUserJoin = async(
         UserName: Data.UserName
     });
 
-    const lobbyResult = await lobbyHandler.tryConnectPlayer(ws.userId, Data.UserName, ws, wss);
+    const lobbyResult = await lobbyHandler.tryConnectPlayer(ws.userId, Data.UserName, gameType, ws, wss);
     var skin = lobbyResult.lobby?.getPlayerInfo(ws.userId)?.getSkin();
 
     if (!lobbyResult.success) {

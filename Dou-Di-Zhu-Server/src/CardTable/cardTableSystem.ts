@@ -24,12 +24,12 @@ export class CardTable {
         };
     }
 
-    public canAddCardHandle(playerInfo: PlayerInfo, cards: any[]): boolean {
+    public canAddCardHandle(playerInfo: PlayerInfo, cards: any[], gameType : number): boolean {
         const cardInstances = cards.map(cardData =>
             new Card(cardData.CardValue, cardData.CardSuit)
         );
 
-        const newCombination = this.getCombination(cardInstances);
+        const newCombination = this.getCombination(cardInstances, gameType);
 
         if (!newCombination) {
             return false;
@@ -41,7 +41,7 @@ export class CardTable {
                     continue;
                 }
 
-                const existingCombination = this.getCombination(handle.getCards());
+                const existingCombination = this.getCombination(handle.getCards(), gameType);
                 if (existingCombination && !this.isStronger(newCombination, existingCombination)) {
                     return false;
                 }
@@ -51,7 +51,7 @@ export class CardTable {
         return true;
     }
 
-    public hasValidCombination(cards: Card[], playerInfo: PlayerInfo): Card[] | null {
+    public hasValidCombination(cards: Card[], playerInfo: PlayerInfo, gameType : number): Card[] | null {
         if (!cards.length) return null;
 
         const sortedCards = [...cards].sort((a, b) => a.getValue() - b.getValue());
@@ -69,7 +69,7 @@ export class CardTable {
                     continue;
                 }
 
-                var newExistingCombination = this.getCombination(handle.getCards());
+                var newExistingCombination = this.getCombination(handle.getCards(), gameType);
 
                 if (!newExistingCombination) {
                     continue;
@@ -135,7 +135,7 @@ export class CardTable {
         return null;
     }
 
-    private getCombination(cards: Card[]): CardCombination | null {
+    private getCombination(cards: Card[], gameType : number): CardCombination | null {
         if (cards.length === 0) return null;
 
         const sortedCards = [...cards].sort((a, b) => this.getCardRank(a) - this.getCardRank(b));
@@ -144,10 +144,10 @@ export class CardTable {
             return new CardCombination(CombinationType.Rocket, 16, sortedCards);
         }
 
-        const bomb = this.checkBombCombinations(sortedCards);
+        const bomb = this.checkBombCombinations(sortedCards, gameType);
         if (bomb) return bomb;
 
-        return this.checkNormalCombinations(sortedCards);
+        return this.checkNormalCombinations(sortedCards, gameType);
     }
 
     public addCard(playerInfo: PlayerInfo, cards: any[]): void {
@@ -228,88 +228,110 @@ export class CardTable {
             cards[0].getSuit() !== cards[1].getSuit();
     }
 
-    private checkBombCombinations(cards: Card[]): CardCombination | null {
-        if (cards.length === 4 && this.allSameValue(cards)) {
-            return new CardCombination(CombinationType.SingleBomb, this.getCardRank(cards[0]), cards);
-        }
-
-        if (cards.length === 5) {
-            const bomb = this.findBomb(cards);
-            if (bomb) return new CardCombination(CombinationType.BombWithOne, this.getCardRank(bomb[0]), cards);
-        }
-
-        if (cards.length === 8) {
-            const bomb = this.findBomb(cards);
-            const remaining = cards.filter(c => !bomb?.includes(c));
-            if (bomb && this.isTwoPairs(remaining)) {
-                return new CardCombination(CombinationType.BombWithTwoPairs, this.getCardRank(bomb[0]), cards);
+    private checkBombCombinations(cards: Card[], gameType : number): CardCombination | null {
+        if(gameType == 0){
+            if (cards.length === 4 && this.allSameValue(cards)) {
+                return new CardCombination(CombinationType.SingleBomb, this.getCardRank(cards[0]), cards);
             }
         }
+        else if(gameType == 1){
+            if (cards.length === 4 && this.allSameValue(cards)) {
+                return new CardCombination(CombinationType.SingleBomb, this.getCardRank(cards[0]), cards);
+            }
 
-        const consecutiveBombs = this.findConsecutiveBombs(cards);
-        if (consecutiveBombs) {
-            return new CardCombination(
-                consecutiveBombs.type,
-                this.getCardRank(consecutiveBombs.highestCard),
-                cards
-            );
+            if (cards.length === 5) {
+                const bomb = this.findBomb(cards);
+                if (bomb) return new CardCombination(CombinationType.BombWithOne, this.getCardRank(bomb[0]), cards);
+            }
+
+            if (cards.length === 8) {
+                const bomb = this.findBomb(cards);
+                const remaining = cards.filter(c => !bomb?.includes(c));
+                if (bomb && this.isTwoPairs(remaining)) {
+                    return new CardCombination(CombinationType.BombWithTwoPairs, this.getCardRank(bomb[0]), cards);
+                }
+            }
+
+            const consecutiveBombs = this.findConsecutiveBombs(cards);
+            if (consecutiveBombs) {
+                return new CardCombination(
+                    consecutiveBombs.type,
+                    this.getCardRank(consecutiveBombs.highestCard),
+                    cards
+                );
+            }
         }
 
         return null;
     }
 
-    private checkNormalCombinations(cards: Card[]): CardCombination | null {
-        if (cards.length === 1) {
-            return new CardCombination(CombinationType.Single, this.getCardRank(cards[0]), cards);
-        }
-
-        if (cards.length === 2 && this.allSameValue(cards)) {
-            return new CardCombination(CombinationType.Pair, this.getCardRank(cards[0]), cards);
-        }
-
-        if (cards.length === 3 && this.allSameValue(cards)) {
-            return new CardCombination(CombinationType.Triple, this.getCardRank(cards[0]), cards);
-        }
-
-        if (cards.length === 4) {
-            const triple = this.findTriple(cards);
-            if (triple) return new CardCombination(CombinationType.ThreeWithOne, this.getCardRank(triple[0]), cards);
-        }
-
-        if (cards.length === 5) {
-            const triple = this.findTriple(cards);
-            const remaining = cards.filter(c => !triple?.includes(c));
-            if (triple && remaining.length === 2 && this.allSameValue(remaining)) {
-                return new CardCombination(CombinationType.ThreeWithPair, this.getCardRank(triple[0]), cards);
+    private checkNormalCombinations(cards: Card[], gameType : number): CardCombination | null {
+        if(gameType == 0){
+            if (cards.length === 1) {
+                return new CardCombination(CombinationType.Single, this.getCardRank(cards[0]), cards);
             }
 
-            if (this.isStraight(cards, 5)) {
+            if (cards.length === 2 && this.allSameValue(cards)) {
+                return new CardCombination(CombinationType.Pair, this.getCardRank(cards[0]), cards);
+            }
+
+            if (cards.length === 3 && this.allSameValue(cards)) {
+                return new CardCombination(CombinationType.Triple, this.getCardRank(cards[0]), cards);
+            }
+        }
+        if(gameType == 1){
+            if (cards.length === 1) {
+                return new CardCombination(CombinationType.Single, this.getCardRank(cards[0]), cards);
+            }
+
+            if (cards.length === 2 && this.allSameValue(cards)) {
+                return new CardCombination(CombinationType.Pair, this.getCardRank(cards[0]), cards);
+            }
+
+            if (cards.length === 3 && this.allSameValue(cards)) {
+                return new CardCombination(CombinationType.Triple, this.getCardRank(cards[0]), cards);
+            }
+
+            if (cards.length === 4) {
+                const triple = this.findTriple(cards);
+                if (triple) return new CardCombination(CombinationType.ThreeWithOne, this.getCardRank(triple[0]), cards);
+            }
+
+            if (cards.length === 5) {
+                const triple = this.findTriple(cards);
+                const remaining = cards.filter(c => !triple?.includes(c));
+                if (triple && remaining.length === 2 && this.allSameValue(remaining)) {
+                    return new CardCombination(CombinationType.ThreeWithPair, this.getCardRank(triple[0]), cards);
+                }
+
+                if (this.isStraight(cards, 5)) {
+                    return new CardCombination(CombinationType.Straight, this.getCardRank(cards[cards.length - 1]), cards);
+                }
+            }
+
+            if (this.isStraight(cards, cards.length)) {
                 return new CardCombination(CombinationType.Straight, this.getCardRank(cards[cards.length - 1]), cards);
             }
-        }
 
-        if (this.isStraight(cards, cards.length)) {
-            return new CardCombination(CombinationType.Straight, this.getCardRank(cards[cards.length - 1]), cards);
-        }
+            if (this.isSequenceOfPairs(cards)) {
+                return new CardCombination(CombinationType.SequenceOfPairs, this.getCardRank(cards[cards.length - 1]), cards);
+            }
 
-        if (this.isSequenceOfPairs(cards)) {
-            return new CardCombination(CombinationType.SequenceOfPairs, this.getCardRank(cards[cards.length - 1]), cards);
-        }
+            if (this.isSequenceOfTriples(cards)) {
+                return new CardCombination(CombinationType.SequenceOfTriples, this.getCardRank(cards[cards.length - 1]), cards);
+            }
 
-        if (this.isSequenceOfTriples(cards)) {
-            return new CardCombination(CombinationType.SequenceOfTriples, this.getCardRank(cards[cards.length - 1]), cards);
-        }
+            if (cards.length === 8) {
+                const triples = this.findTwoTriples(cards);
+                if (triples) return new CardCombination(CombinationType.TwoTriplesWithTwo, this.getCardRank(triples[0][0]), cards);
+            }
 
-        if (cards.length === 8) {
-            const triples = this.findTwoTriples(cards);
-            if (triples) return new CardCombination(CombinationType.TwoTriplesWithTwo, this.getCardRank(triples[0][0]), cards);
-        }
-
-        if (cards.length === 10) {
-            const triples = this.findTwoTriples(cards);
-            const remaining = cards.filter(c => !triples?.flat().includes(c));
-            if (triples && this.isTwoPairs(remaining)) {
-                return new CardCombination(CombinationType.TwoTriplesWithTwoPairs, this.getCardRank(triples[0][0]), cards);
+            if (cards.length === 10) {
+                const triples = this.findTwoTriples(cards);
+                const remaining = cards.filter(c => !triples?.flat().includes(c));
+                if (triples && this.isTwoPairs(remaining)) {
+                    return new CardCombination(CombinationType.TwoTriplesWithTwoPairs, this.getCardRank(triples[0][0]), cards);
+                }
             }
         }
 
