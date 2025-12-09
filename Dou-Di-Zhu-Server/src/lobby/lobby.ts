@@ -140,7 +140,7 @@ class LobbyService {
     constructor(maxPlayerLobbyCount: number, lobbyHandle: LobbyHandler, gameType: number) {
         this.gameType = gameType;
         this.moveTime = gameType == 0 ? 20 : 15;
-        this.pairProbability = gameType == 0 ? 0.6 : 0.98;
+        this.pairProbability = gameType == 0 ? 0.05 : 0.98;
         this.lobbyId = this.generateLobbyId();
         this.maxPlayerLobbyCount = maxPlayerLobbyCount;
         this.currentPlayerLobbyCount = 0;
