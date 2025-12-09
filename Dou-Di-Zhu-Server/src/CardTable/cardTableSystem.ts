@@ -5,9 +5,8 @@ import { logger } from "../utils/logger";
 export class CardTable {
     private cardsTableHandles: CardTableHandle[] = [];
     private combinationCache = new Map<string, CardCombination[]>();
-    private playerComboTypeIndex = new Map<string, number>(); 
-    private playerComboRound = new Map<string, number>(); 
-    
+    private playerComboState = new Map<string, number>(); // 0: минимальная, 1: тройка, 2: бомба, 3: ракета
+
     public getTableState(): TableState {
         const playerStates: PlayerTableState[] = this.cardsTableHandles.map(handle => ({
             playerId: handle.getPlayerInfo().getId(),
@@ -61,191 +60,165 @@ export class CardTable {
         const sortedCards = [...cards].sort((a, b) => this.getCardRank(a) - this.getCardRank(b));
 
         const allCombinations = this.getCachedCombinations(sortedCards, gameType);
+        if (allCombinations.length === 0) return null;
 
-        if (this.cardsTableHandles.length === 0) {
-            return this.getNextTypeCombination(playerId, allCombinations, null, gameType);
-        }
+        // Получаем текущее состояние для игрока (по умолчанию 0 - минимальная комбинация)
+        let comboState = this.playerComboState.get(playerId) || 0;
 
+        // Определяем самую сильную комбинацию на столе
         let strongestTableCombination: CardCombination | null = null;
-
         for (const handle of this.cardsTableHandles) {
-            if (handle.getPlayerInfo().getId() === playerId) {
-                continue;
-            }
+            if (handle.getPlayerInfo().getId() === playerId) continue;
 
             const comb = this.getCombination(handle.getCards(), gameType);
             if (!comb) continue;
 
-            if (strongestTableCombination === null ||
-                this.isStronger(comb, strongestTableCombination)) {
+            if (strongestTableCombination === null || this.isStronger(comb, strongestTableCombination)) {
                 strongestTableCombination = comb;
             }
         }
 
-        if (!strongestTableCombination) {
-            return this.getNextTypeCombination(playerId, allCombinations, null, gameType);
+        // В зависимости от состояния выбираем комбинацию
+        let result: Card[] | null = null;
+
+        // Всегда пытаемся сначала найти подходящую комбинацию текущего типа
+        switch (comboState) {
+            case 0: // Минимальная подходящая комбинация
+                result = this.findMinimalSuitableCombination(allCombinations, strongestTableCombination);
+                break;
+
+            case 1: // Тройка
+                result = this.findTripleCombination(allCombinations, strongestTableCombination);
+                break;
+
+            case 2: // Бомба
+                result = this.findBombCombination(allCombinations, strongestTableCombination);
+                break;
+
+            case 3: // Ракета
+                result = this.findRocketCombination(allCombinations, strongestTableCombination);
+                break;
         }
 
-        return this.getNextTypeBeatingCombination(playerId, allCombinations, strongestTableCombination, gameType);
-    }
+        // Если для текущего состояния не нашли комбинацию, пробуем следующие типы по порядку
+        if (!result) {
+            for (let nextState = (comboState + 1) % 4; nextState !== comboState; nextState = (nextState + 1) % 4) {
+                let nextResult: Card[] | null = null;
 
-    private getNextTypeCombination(playerId: string, allCombinations: CardCombination[], tableCombination: CardCombination | null, gameType: number): Card[] | null {
-        if (allCombinations.length === 0) return null;
+                switch (nextState) {
+                    case 0:
+                        nextResult = this.findMinimalSuitableCombination(allCombinations, strongestTableCombination);
+                        break;
+                    case 1:
+                        nextResult = this.findTripleCombination(allCombinations, strongestTableCombination);
+                        break;
+                    case 2:
+                        nextResult = this.findBombCombination(allCombinations, strongestTableCombination);
+                        break;
+                    case 3:
+                        nextResult = this.findRocketCombination(allCombinations, strongestTableCombination);
+                        break;
+                }
 
-        const combinationsByType = new Map<CombinationType, CardCombination[]>();
-        for (const comb of allCombinations) {
-            if (!combinationsByType.has(comb.type)) {
-                combinationsByType.set(comb.type, []);
+                if (nextResult) {
+                    result = nextResult;
+                    comboState = nextState;
+                    break;
+                }
             }
-            combinationsByType.get(comb.type)!.push(comb);
         }
 
-        const minCombinationByType = new Map<CombinationType, CardCombination>();
-        for (const [type, combos] of combinationsByType) {
-            const minCombo = combos.reduce((min, current) => {
-                if (min === null) return current;
-                if (current.rank < min.rank) return current;
-                if (current.rank === min.rank && current.cards.length < min.cards.length) return current;
-                return min;
-            }, combos[0]);
-            minCombinationByType.set(type, minCombo);
+        // Если нашли комбинацию, обновляем состояние для следующего вызова
+        if (result) {
+            // Переходим к следующему состоянию (циклически)
+            comboState = (comboState + 1) % 4;
+            this.playerComboState.set(playerId, comboState);
+            return result;
         }
 
-        const availableTypes = this.getAvailableTypesInOrder(gameType)
-            .filter(type => minCombinationByType.has(type));
-
-        if (availableTypes.length === 0) return null;
-
-        let currentIndex = this.playerComboTypeIndex.get(playerId) || 0;
-        let round = this.playerComboRound.get(playerId) || 0;
-
-        if (currentIndex >= availableTypes.length) {
-            currentIndex = 0;
-            round++;
-            if (round > 100) round = 0;
-        }
-
-        const currentType = availableTypes[currentIndex];
-
-        currentIndex++;
-        if (currentIndex >= availableTypes.length) {
-            currentIndex = 0;
-            round++;
-        }
-
-        this.playerComboTypeIndex.set(playerId, currentIndex);
-        this.playerComboRound.set(playerId, round);
-
-        return minCombinationByType.get(currentType)!.cards;
+        return null;
     }
 
-    private getNextTypeBeatingCombination(playerId: string, allCombinations: CardCombination[], tableCombination: CardCombination, gameType: number): Card[] | null {
-        const beatingCombinations = allCombinations.filter(comb =>
-            this.isStronger(comb, tableCombination)
+    private findMinimalSuitableCombination(combinations: CardCombination[], tableCombination: CardCombination | null): Card[] | null {
+        // Фильтруем комбинации, которые могут быть сыграны (бьют стол или это первый ход)
+        const suitableCombinations = combinations.filter(comb =>
+            !tableCombination || this.isStronger(comb, tableCombination)
         );
 
-        if (beatingCombinations.length === 0) return null;
+        if (suitableCombinations.length === 0) return null;
 
-        const combinationsByType = new Map<CombinationType, CardCombination[]>();
-        for (const comb of beatingCombinations) {
-            if (!combinationsByType.has(comb.type)) {
-                combinationsByType.set(comb.type, []);
+        // Находим минимальную по силе комбинацию
+        return suitableCombinations.sort((a, b) => {
+            // Не-бомбы приоритетнее бомб (кроме ракеты)
+            if (!this.isBombType(a.type) && this.isBombType(b.type) && b.type !== CombinationType.Rocket) {
+                return -1;
             }
-            combinationsByType.get(comb.type)!.push(comb);
-        }
+            if (this.isBombType(a.type) && a.type !== CombinationType.Rocket && !this.isBombType(b.type)) {
+                return 1;
+            }
 
-        const minBeatingByType = new Map<CombinationType, CardCombination>();
-        for (const [type, combos] of combinationsByType) {
-            const minCombo = combos.reduce((min, current) => {
-                if (min === null) return current;
-                if (current.rank < min.rank) return current;
-                if (current.rank === min.rank && current.cards.length < min.cards.length) return current;
-                return min;
-            }, combos[0]);
-            minBeatingByType.set(type, minCombo);
-        }
+            // Сравниваем по рангу
+            if (a.rank !== b.rank) {
+                return a.rank - b.rank;
+            }
 
-        let availableTypes: CombinationType[];
-
-        if (minBeatingByType.has(tableCombination.type)) {
-            availableTypes = [tableCombination.type];
-        } else {
-            availableTypes = this.getBombTypes()
-                .filter(type => minBeatingByType.has(type));
-        }
-
-        if (availableTypes.length === 0) return null;
-
-        let currentIndex = this.playerComboTypeIndex.get(playerId) || 0;
-        let round = this.playerComboRound.get(playerId) || 0;
-
-        if (currentIndex >= availableTypes.length) {
-            currentIndex = 0;
-            round++;
-            if (round > 100) round = 0;
-        }
-
-        const currentType = availableTypes[currentIndex];
-
-        currentIndex++;
-        if (currentIndex >= availableTypes.length) {
-            currentIndex = 0;
-            round++;
-        }
-
-        this.playerComboTypeIndex.set(playerId, currentIndex);
-        this.playerComboRound.set(playerId, round);
-
-        return minBeatingByType.get(currentType)!.cards;
+            // Затем по количеству карт
+            return a.cards.length - b.cards.length;
+        })[0].cards;
     }
 
-    private getAvailableTypesInOrder(gameType: number): CombinationType[] {
-        const types: CombinationType[] = [
-            CombinationType.Single,
-            CombinationType.Pair,
-            CombinationType.Triple,
-            CombinationType.Straight,
-            CombinationType.SequenceOfPairs,
-            CombinationType.SequenceOfTriples,
-            CombinationType.ThreeWithOne,
-            CombinationType.ThreeWithPair,
-            CombinationType.TwoTriplesWithTwo,
-            CombinationType.TwoTriplesWithTwoPairs,
-            CombinationType.SingleBomb,
-            CombinationType.DoubleBomb,
-            CombinationType.TripleBomb,
-            CombinationType.QuadrupleBomb,
-            CombinationType.MaxBomb,
-            CombinationType.Rocket
-        ];
+    private findTripleCombination(combinations: CardCombination[], tableCombination: CardCombination | null): Card[] | null {
+        // Ищем тройки (Triple или ThreeWithOne, ThreeWithPair)
+        const tripleCombinations = combinations.filter(comb =>
+            (comb.type === CombinationType.Triple ||
+                comb.type === CombinationType.ThreeWithOne ||
+                comb.type === CombinationType.ThreeWithPair ||
+                comb.type === CombinationType.SequenceOfTriples ||
+                comb.type === CombinationType.TwoTriplesWithTwo ||
+                comb.type === CombinationType.TwoTriplesWithTwoPairs) &&
+            (!tableCombination || this.isStronger(comb, tableCombination))
+        );
 
-        if (gameType === 0) {
-            return types.filter(type =>
-                type === CombinationType.Single ||
-                type === CombinationType.Pair ||
-                type === CombinationType.Triple ||
-                type === CombinationType.SingleBomb ||
-                type === CombinationType.Rocket
-            );
-        } else {
-            return types;
-        }
+        if (tripleCombinations.length === 0) return null;
+
+        // Находим минимальную тройку
+        return tripleCombinations.sort((a, b) => a.rank - b.rank)[0].cards;
     }
 
-    private getBombTypes(): CombinationType[] {
-        return [
-            CombinationType.SingleBomb,
-            CombinationType.DoubleBomb,
-            CombinationType.TripleBomb,
-            CombinationType.QuadrupleBomb,
-            CombinationType.MaxBomb,
-            CombinationType.Rocket
-        ];
+    private findBombCombination(combinations: CardCombination[], tableCombination: CardCombination | null): Card[] | null {
+        // Ищем бомбы (все типы бомб кроме ракеты)
+        const bombCombinations = combinations.filter(comb =>
+            this.isBombType(comb.type) &&
+            comb.type !== CombinationType.Rocket &&
+            (!tableCombination || this.isStronger(comb, tableCombination))
+        );
+
+        if (bombCombinations.length === 0) return null;
+
+        // Находим минимальную бомбу
+        return bombCombinations.sort((a, b) => {
+            const aStrength = this.getBombStrength(a.type);
+            const bStrength = this.getBombStrength(b.type);
+            if (aStrength !== bStrength) return aStrength - bStrength;
+            return a.rank - b.rank;
+        })[0].cards;
     }
 
+    private findRocketCombination(combinations: CardCombination[], tableCombination: CardCombination | null): Card[] | null {
+        // Ищем ракету
+        const rocketCombinations = combinations.filter(comb =>
+            comb.type === CombinationType.Rocket &&
+            (!tableCombination || this.isStronger(comb, tableCombination))
+        );
+
+        if (rocketCombinations.length === 0) return null;
+
+        return rocketCombinations[0].cards;
+    }
+
+    // Сброс состояния для игрока
     public resetPlayerComboState(playerId: string): void {
-        this.playerComboTypeIndex.delete(playerId);
-        this.playerComboRound.delete(playerId);
+        this.playerComboState.delete(playerId);
     }
 
     private getCachedCombinations(cards: Card[], gameType: number): CardCombination[] {
@@ -753,8 +726,7 @@ export class CardTable {
 
     public clearHandlers(): void {
         this.cardsTableHandles = [];
-        this.playerComboTypeIndex.clear();
-        this.playerComboRound.clear();
+        this.playerComboState.clear();
     }
 
     public getCardCount(playerInfo: PlayerInfo): number {
@@ -1077,6 +1049,20 @@ export class CardTable {
         if (newStrength < existingStrength) return false;
 
         return newComb.rank > existingComb.rank;
+    }
+
+    private getBombStrength(type: CombinationType): number {
+        const strengths: { [key: number]: number } = {
+            [CombinationType.SingleBomb]: 1,
+            [CombinationType.BombWithOne]: 1,
+            [CombinationType.BombWithTwoPairs]: 1,
+            [CombinationType.DoubleBomb]: 2,
+            [CombinationType.TripleBomb]: 3,
+            [CombinationType.QuadrupleBomb]: 4,
+            [CombinationType.MaxBomb]: 5,
+            [CombinationType.Rocket]: 6,
+        };
+        return strengths[type] || 0;
     }
 }
 
