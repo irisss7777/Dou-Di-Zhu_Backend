@@ -5,9 +5,9 @@ import { logger } from "../utils/logger";
 export class CardTable {
     private cardsTableHandles: CardTableHandle[] = [];
     private combinationCache = new Map<string, CardCombination[]>();
-    private playerComboLevel = new Map<string, number>();
-    private playerComboRound = new Map<string, number>();
-
+    private playerComboTypeIndex = new Map<string, number>(); 
+    private playerComboRound = new Map<string, number>(); 
+    
     public getTableState(): TableState {
         const playerStates: PlayerTableState[] = this.cardsTableHandles.map(handle => ({
             playerId: handle.getPlayerInfo().getId(),
@@ -54,8 +54,6 @@ export class CardTable {
         return true;
     }
 
-    //
-
     public hasValidCombination(cards: Card[], playerInfo: PlayerInfo, gameType: number): Card[] | null {
         if (!cards.length) return null;
 
@@ -65,7 +63,7 @@ export class CardTable {
         const allCombinations = this.getCachedCombinations(sortedCards, gameType);
 
         if (this.cardsTableHandles.length === 0) {
-            return this.getNextLevelCombination(playerId, allCombinations, null);
+            return this.getNextTypeCombination(playerId, allCombinations, null, gameType);
         }
 
         let strongestTableCombination: CardCombination | null = null;
@@ -85,104 +83,168 @@ export class CardTable {
         }
 
         if (!strongestTableCombination) {
-            return this.getNextLevelCombination(playerId, allCombinations, null);
+            return this.getNextTypeCombination(playerId, allCombinations, null, gameType);
         }
 
-        return this.getNextLevelBeatingCombination(playerId, allCombinations, strongestTableCombination);
+        return this.getNextTypeBeatingCombination(playerId, allCombinations, strongestTableCombination, gameType);
     }
 
-    private getNextLevelCombination(playerId: string, allCombinations: CardCombination[], tableCombination: CardCombination | null): Card[] | null {
+    private getNextTypeCombination(playerId: string, allCombinations: CardCombination[], tableCombination: CardCombination | null, gameType: number): Card[] | null {
         if (allCombinations.length === 0) return null;
 
-        const sortedCombinations = [...allCombinations].sort((a, b) => {
-            if (!this.isBombType(a.type) && this.isBombType(b.type) && b.type !== CombinationType.Rocket) {
-                return -1;
+        const combinationsByType = new Map<CombinationType, CardCombination[]>();
+        for (const comb of allCombinations) {
+            if (!combinationsByType.has(comb.type)) {
+                combinationsByType.set(comb.type, []);
             }
-            if (this.isBombType(a.type) && a.type !== CombinationType.Rocket && !this.isBombType(b.type)) {
-                return 1;
-            }
+            combinationsByType.get(comb.type)!.push(comb);
+        }
 
-            if (a.rank !== b.rank) {
-                return a.rank - b.rank;
-            }
+        const minCombinationByType = new Map<CombinationType, CardCombination>();
+        for (const [type, combos] of combinationsByType) {
+            const minCombo = combos.reduce((min, current) => {
+                if (min === null) return current;
+                if (current.rank < min.rank) return current;
+                if (current.rank === min.rank && current.cards.length < min.cards.length) return current;
+                return min;
+            }, combos[0]);
+            minCombinationByType.set(type, minCombo);
+        }
 
-            return a.cards.length - b.cards.length;
-        });
+        const availableTypes = this.getAvailableTypesInOrder(gameType)
+            .filter(type => minCombinationByType.has(type));
 
-        let currentLevel = this.playerComboLevel.get(playerId) || 0;
+        if (availableTypes.length === 0) return null;
+
+        let currentIndex = this.playerComboTypeIndex.get(playerId) || 0;
         let round = this.playerComboRound.get(playerId) || 0;
 
-        if (currentLevel >= sortedCombinations.length) {
-            currentLevel = 0;
+        if (currentIndex >= availableTypes.length) {
+            currentIndex = 0;
             round++;
-            if (round > 10) round = 0; 
+            if (round > 100) round = 0;
         }
 
-        const selectedCombination = sortedCombinations[currentLevel];
+        const currentType = availableTypes[currentIndex];
 
-        currentLevel++;
-        if (currentLevel >= sortedCombinations.length) {
-            currentLevel = 0;
+        currentIndex++;
+        if (currentIndex >= availableTypes.length) {
+            currentIndex = 0;
+            round++;
         }
 
-        this.playerComboLevel.set(playerId, currentLevel);
+        this.playerComboTypeIndex.set(playerId, currentIndex);
         this.playerComboRound.set(playerId, round);
 
-        return selectedCombination.cards;
+        return minCombinationByType.get(currentType)!.cards;
     }
 
-    private getNextLevelBeatingCombination(playerId: string, allCombinations: CardCombination[], tableCombination: CardCombination): Card[] | null {
+    private getNextTypeBeatingCombination(playerId: string, allCombinations: CardCombination[], tableCombination: CardCombination, gameType: number): Card[] | null {
         const beatingCombinations = allCombinations.filter(comb =>
             this.isStronger(comb, tableCombination)
         );
 
         if (beatingCombinations.length === 0) return null;
 
-        const sortedBeatingCombinations = [...beatingCombinations].sort((a, b) => {
-            if (a.type === tableCombination.type && b.type !== tableCombination.type) {
-                return -1;
+        const combinationsByType = new Map<CombinationType, CardCombination[]>();
+        for (const comb of beatingCombinations) {
+            if (!combinationsByType.has(comb.type)) {
+                combinationsByType.set(comb.type, []);
             }
-            if (a.type !== tableCombination.type && b.type === tableCombination.type) {
-                return 1;
-            }
+            combinationsByType.get(comb.type)!.push(comb);
+        }
 
-            if (a.type === tableCombination.type && b.type === tableCombination.type) {
-                return a.rank - b.rank;
-            }
+        const minBeatingByType = new Map<CombinationType, CardCombination>();
+        for (const [type, combos] of combinationsByType) {
+            const minCombo = combos.reduce((min, current) => {
+                if (min === null) return current;
+                if (current.rank < min.rank) return current;
+                if (current.rank === min.rank && current.cards.length < min.cards.length) return current;
+                return min;
+            }, combos[0]);
+            minBeatingByType.set(type, minCombo);
+        }
 
-            const aStrength = this.getBombStrength(a.type);
-            const bStrength = this.getBombStrength(b.type);
-            if (aStrength !== bStrength) {
-                return aStrength - bStrength;
-            }
+        let availableTypes: CombinationType[];
 
-            return a.rank - b.rank;
-        });
+        if (minBeatingByType.has(tableCombination.type)) {
+            availableTypes = [tableCombination.type];
+        } else {
+            availableTypes = this.getBombTypes()
+                .filter(type => minBeatingByType.has(type));
+        }
 
-        let currentLevel = this.playerComboLevel.get(playerId) || 0;
+        if (availableTypes.length === 0) return null;
+
+        let currentIndex = this.playerComboTypeIndex.get(playerId) || 0;
         let round = this.playerComboRound.get(playerId) || 0;
 
-        if (currentLevel >= sortedBeatingCombinations.length) {
-            currentLevel = 0;
+        if (currentIndex >= availableTypes.length) {
+            currentIndex = 0;
             round++;
-            if (round > 10) round = 0;
+            if (round > 100) round = 0;
         }
 
-        const selectedCombination = sortedBeatingCombinations[currentLevel];
+        const currentType = availableTypes[currentIndex];
 
-        currentLevel++;
-        if (currentLevel >= sortedBeatingCombinations.length) {
-            currentLevel = 0;
+        currentIndex++;
+        if (currentIndex >= availableTypes.length) {
+            currentIndex = 0;
+            round++;
         }
 
-        this.playerComboLevel.set(playerId, currentLevel);
+        this.playerComboTypeIndex.set(playerId, currentIndex);
         this.playerComboRound.set(playerId, round);
 
-        return selectedCombination.cards;
+        return minBeatingByType.get(currentType)!.cards;
+    }
+
+    private getAvailableTypesInOrder(gameType: number): CombinationType[] {
+        const types: CombinationType[] = [
+            CombinationType.Single,
+            CombinationType.Pair,
+            CombinationType.Triple,
+            CombinationType.Straight,
+            CombinationType.SequenceOfPairs,
+            CombinationType.SequenceOfTriples,
+            CombinationType.ThreeWithOne,
+            CombinationType.ThreeWithPair,
+            CombinationType.TwoTriplesWithTwo,
+            CombinationType.TwoTriplesWithTwoPairs,
+            CombinationType.SingleBomb,
+            CombinationType.DoubleBomb,
+            CombinationType.TripleBomb,
+            CombinationType.QuadrupleBomb,
+            CombinationType.MaxBomb,
+            CombinationType.Rocket
+        ];
+
+        if (gameType === 0) {
+            return types.filter(type =>
+                type === CombinationType.Single ||
+                type === CombinationType.Pair ||
+                type === CombinationType.Triple ||
+                type === CombinationType.SingleBomb ||
+                type === CombinationType.Rocket
+            );
+        } else {
+            return types;
+        }
+    }
+
+    private getBombTypes(): CombinationType[] {
+        return [
+            CombinationType.SingleBomb,
+            CombinationType.DoubleBomb,
+            CombinationType.TripleBomb,
+            CombinationType.QuadrupleBomb,
+            CombinationType.MaxBomb,
+            CombinationType.Rocket
+        ];
     }
 
     public resetPlayerComboState(playerId: string): void {
-        this.playerComboLevel.delete(playerId);
+        this.playerComboTypeIndex.delete(playerId);
         this.playerComboRound.delete(playerId);
     }
 
@@ -661,71 +723,6 @@ export class CardTable {
         }
     }
 
-    private getSmallestCombination(combinations: CardCombination[]): Card[] | null {
-        if (combinations.length === 0) return null;
-
-        const sorted = [...combinations].sort((a, b) => {
-            if (!this.isBombType(a.type) && this.isBombType(b.type) && b.type !== CombinationType.Rocket) {
-                return -1;
-            }
-            if (this.isBombType(a.type) && a.type !== CombinationType.Rocket && !this.isBombType(b.type)) {
-                return 1;
-            }
-
-            if (a.rank !== b.rank) {
-                return a.rank - b.rank;
-            }
-
-            return a.cards.length - b.cards.length;
-        });
-
-        return sorted[0].cards;
-    }
-
-    private findSmallestBeatingCombination(
-        playerCombinations: CardCombination[],
-        tableCombination: CardCombination
-    ): Card[] | null {
-        const beatingCombinations = playerCombinations.filter(comb =>
-            this.isStronger(comb, tableCombination)
-        );
-
-        if (beatingCombinations.length === 0) return null;
-
-        const sameType = beatingCombinations.filter(comb => comb.type === tableCombination.type);
-        if (sameType.length > 0) {
-            return sameType.sort((a, b) => a.rank - b.rank)[0].cards;
-        }
-
-        const bombs = beatingCombinations.filter(comb => this.isBombType(comb.type));
-        if (bombs.length > 0) {
-            return bombs.sort((a, b) => {
-                const aStrength = this.getBombStrength(a.type);
-                const bStrength = this.getBombStrength(b.type);
-                if (aStrength !== bStrength) return aStrength - bStrength;
-                return a.rank - b.rank;
-            })[0].cards;
-        }
-
-        return null;
-    }
-
-    private getBombStrength(type: CombinationType): number {
-        const strengths: { [key: number]: number } = {
-            [CombinationType.SingleBomb]: 1,
-            [CombinationType.BombWithOne]: 1,
-            [CombinationType.BombWithTwoPairs]: 1,
-            [CombinationType.DoubleBomb]: 2,
-            [CombinationType.TripleBomb]: 3,
-            [CombinationType.QuadrupleBomb]: 4,
-            [CombinationType.MaxBomb]: 5,
-            [CombinationType.Rocket]: 6,
-        };
-        return strengths[type] || 0;
-    }
-
-    //
-
     private getCombination(cards: Card[], gameType: number): CardCombination | null {
         if (cards.length === 0) return null;
 
@@ -756,7 +753,7 @@ export class CardTable {
 
     public clearHandlers(): void {
         this.cardsTableHandles = [];
-        this.playerComboLevel.clear();
+        this.playerComboTypeIndex.clear();
         this.playerComboRound.clear();
     }
 
@@ -771,7 +768,6 @@ export class CardTable {
         this.cardsTableHandles = this.cardsTableHandles.filter(cardHandler =>
             cardHandler.getPlayerInfo().getId() !== playerInfo.getId()
         );
-
         this.resetPlayerComboState(playerInfo.getId());
     }
 
