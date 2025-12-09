@@ -23,7 +23,7 @@ export const handleAddCard = async (
     }> = [];
 
     if(targetAdd) {
-        var cards = lobbyResult?.getCardHolder().getRandomCards(cardCount);
+        var cards = lobbyResult?.getCardHolder().getRandomCards(cardCount, lobbyResult.getCardPropability());
 
         const response: WSMessage = {
             Type: MessageType.ADD_CARD,

@@ -134,17 +134,23 @@ class LobbyService {
     private lobbyIsStarted = false;
     private currentPlayer = 0;
     private lobbyIsActive = true;
+    private pairProbability : number;
     private gameType : number;
 
     constructor(maxPlayerLobbyCount: number, lobbyHandle: LobbyHandler, gameType: number) {
         this.gameType = gameType;
         this.moveTime = gameType == 0 ? 20 : 15;
+        this.pairProbability = gameType == 0 ? 0.8 : 0.9;
         this.lobbyId = this.generateLobbyId();
         this.maxPlayerLobbyCount = maxPlayerLobbyCount;
         this.currentPlayerLobbyCount = 0;
         this.cardHolder.initHolder();
         this.cardTable = new CardTable();
         this.lobbyHandle = lobbyHandle;
+    }
+    
+    public getCardPropability() : number{
+        return this.pairProbability;
     }
     
     public destroyLobby(): void{
