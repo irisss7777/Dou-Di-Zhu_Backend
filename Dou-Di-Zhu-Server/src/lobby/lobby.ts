@@ -343,11 +343,11 @@ class LobbyService {
 
     public async tryConnectPlayer(playerId: string, playerName: string, ws: CustomWebSocket, wss: WebSocketServer): Promise<boolean> {
         await this.lobbyMutex.acquire();
-        
-        if(this.lobbyIsStarted)
-            return false;
 
         try {
+            if(this.lobbyIsStarted)
+                return false;
+            
             if (this.currentPlayerLobbyCount < this.maxPlayerLobbyCount &&
                 !this.connectedPlayers.some(player => player.getId() === playerId)) {
                 this.currentPlayerLobbyCount++;
@@ -364,6 +364,7 @@ class LobbyService {
                 
                 return true;
             }
+
             return false;
         } finally {
             this.lobbyMutex.release();
@@ -480,6 +481,9 @@ class LobbyHandler {
 
     public async tryConnectPlayer(playerId: string, playerName: string, ws: CustomWebSocket, wss: WebSocketServer): Promise<{ success: boolean; lobbyId?: string; lobby?: LobbyService }> {
         await this.connectMutex.acquire();
+
+        logger.info(`Player try connect`);
+            
 
         try {
             for (const lobby of this.allLobby) {
