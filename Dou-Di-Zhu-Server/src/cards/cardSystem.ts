@@ -94,7 +94,7 @@ export class CardHolder
         return this.cards.length;
     }
 
-    public getRandomCards(count: number, pairProbability: number = 0.85): Card[] {
+    public getRandomCards(count: number, pairProbability: number): Card[] {
         if (count > this.cards.length) {
             count = this.cards.length;
         }

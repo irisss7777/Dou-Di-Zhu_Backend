@@ -63,7 +63,7 @@ export const handleAddCard = async (
                 return;
             }
 
-            var cards = lobbyResult?.getCardHolder().getRandomCards(cardCount);
+            var cards = lobbyResult?.getCardHolder().getRandomCards(cardCount, lobbyResult.getCardPropability());
             var cardsCount = cardCount;
 
             if(lobbyResult?.getCardCount(customClient.userId) != undefined)
