@@ -68,10 +68,15 @@ export class CardTable {
         const allCombinations = this.getCachedCombinations(sortedCards, gameType);
         if (allCombinations.length === 0) return null;
 
-        // Получаем текущее состояние для игрока (по умолчанию 0 - минимальная комбинация)
-        let comboState = this.playerComboState.get(playerId) || 0;
+        // Сначала проверим, есть ли у игрока ракета - она бьет любую комбинацию
+        const rocketCombinations = allCombinations.filter(comb => comb.type === CombinationType.Rocket);
+        if (rocketCombinations.length > 0) {
+            // Ракета всегда может быть сыграна, если на столе нет другой ракеты
+            // Но ракету можно сыграть в любой момент
+            return rocketCombinations[0].cards;
+        }
 
-        // Определяем самую сильную комбинацию на столе
+        // Определяем самую сильную комбинацию на столе (чужие)
         let strongestTableCombination: CardCombination | null = null;
         for (const handle of this.cardsTableHandles) {
             if (handle.getPlayerInfo().getId() === playerId) continue;
@@ -83,6 +88,14 @@ export class CardTable {
                 strongestTableCombination = comb;
             }
         }
+
+        // Если на столе нет чужих карт, возвращаем минимальную комбинацию
+        if (strongestTableCombination === null) {
+            return this.findMinimalCombination(allCombinations);
+        }
+
+        // Получаем текущее состояние для игрока (по умолчанию 0 - минимальная комбинация)
+        let comboState = this.playerComboState.get(playerId) || 0;
 
         // В зависимости от состояния выбираем комбинацию
         let result: Card[] | null = null;
@@ -106,31 +119,14 @@ export class CardTable {
                 break;
         }
 
-        // Если для текущего состояния не нашли комбинацию, пробуем следующие типы по порядку
+        // Если для текущего состояния не нашли комбинацию, ищем любую комбинацию, которая бьет
         if (!result) {
-            for (let nextState = (comboState + 1) % 4; nextState !== comboState; nextState = (nextState + 1) % 4) {
-                let nextResult: Card[] | null = null;
-
-                switch (nextState) {
-                    case 0:
-                        nextResult = this.findMinimalSuitableCombination(allCombinations, strongestTableCombination);
-                        break;
-                    case 1:
-                        nextResult = this.findTripleCombination(allCombinations, strongestTableCombination);
-                        break;
-                    case 2:
-                        nextResult = this.findBombCombination(allCombinations, strongestTableCombination);
-                        break;
-                    case 3:
-                        nextResult = this.findRocketCombination(allCombinations, strongestTableCombination);
-                        break;
-                }
-
-                if (nextResult) {
-                    result = nextResult;
-                    comboState = nextState;
-                    break;
-                }
+            const anyBeatingCombination = allCombinations.find(comb =>
+                this.isStronger(comb, strongestTableCombination!)
+            );
+            if (anyBeatingCombination) {
+                result = anyBeatingCombination.cards;
+                comboState = this.getStateForCombination(anyBeatingCombination.type);
             }
         }
 
@@ -145,6 +141,50 @@ export class CardTable {
         return null;
     }
 
+// Новый метод для поиска минимальной комбинации (без учета стола)
+    private findMinimalCombination(combinations: CardCombination[]): Card[] | null {
+        if (combinations.length === 0) return null;
+
+        // Находим минимальную по силе комбинацию
+        return combinations.sort((a, b) => {
+            // Не-бомбы приоритетнее бомб (кроме ракеты)
+            if (!this.isBombType(a.type) && this.isBombType(b.type) && b.type !== CombinationType.Rocket) {
+                return -1;
+            }
+            if (this.isBombType(a.type) && a.type !== CombinationType.Rocket && !this.isBombType(b.type)) {
+                return 1;
+            }
+
+            // Сравниваем по рангу
+            if (a.rank !== b.rank) {
+                return a.rank - b.rank;
+            }
+
+            // Затем по количеству карт
+            return a.cards.length - b.cards.length;
+        })[0].cards;
+    }
+
+// Метод для определения состояния по типу комбинации
+    private getStateForCombination(type: CombinationType): number {
+        if (type === CombinationType.Rocket) return 3;
+
+        if (this.isBombType(type)) {
+            return 2;
+        }
+
+        if (type === CombinationType.Triple ||
+            type === CombinationType.ThreeWithOne ||
+            type === CombinationType.ThreeWithPair ||
+            type === CombinationType.SequenceOfTriples ||
+            type === CombinationType.TwoTriplesWithTwo ||
+            type === CombinationType.TwoTriplesWithTwoPairs) {
+            return 1;
+        }
+
+        return 0;
+    }
+    
     private findMinimalSuitableCombination(combinations: CardCombination[], tableCombination: CardCombination | null): Card[] | null {
         // Фильтруем комбинации, которые могут быть сыграны (бьют стол или это первый ход)
         const suitableCombinations = combinations.filter(comb =>
@@ -213,12 +253,12 @@ export class CardTable {
     private findRocketCombination(combinations: CardCombination[], tableCombination: CardCombination | null): Card[] | null {
         // Ищем ракету
         const rocketCombinations = combinations.filter(comb =>
-            comb.type === CombinationType.Rocket &&
-            (!tableCombination || this.isStronger(comb, tableCombination))
+            comb.type === CombinationType.Rocket
         );
 
         if (rocketCombinations.length === 0) return null;
 
+        // Ракета всегда может быть сыграна (бьет всё)
         return rocketCombinations[0].cards;
     }
 
