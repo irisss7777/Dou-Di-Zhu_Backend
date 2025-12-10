@@ -274,28 +274,36 @@ class LobbyService {
     private canPlayerPlayAnyCard(playerInfo: PlayerInfo, cards: Card[]): boolean {
         if (!cards.length) return false;
 
-        const tableState = this.cardTable.getTableState();
-
-        if (tableState.totalCardsOnTable === 0) {
-            return true;
-        }
-
         const allCombinations = this.cardTable.getCachedCombinationsForPlayer(playerInfo, this.gameType);
         if (!allCombinations || allCombinations.length === 0) return false;
-        
+
+        const tableState = this.cardTable.getTableState();
+
+        let hasOpponentCards = false;
         let strongestTableCombination: CardCombination | null = null;
+
         for (const playerState of tableState.players) {
             if (playerState.playerId === playerInfo.getId()) continue;
 
-            const tableCards = playerState.cards.map(cardData =>
-                new Card(cardData.value, cardData.suit)
-            );
+            if (playerState.cards && playerState.cards.length > 0) {
+                hasOpponentCards = true;
 
-            const comb = this.cardTable.getCombination(tableCards, this.gameType);
-            if (comb && (strongestTableCombination === null ||
-                this.cardTable.isStronger(comb, strongestTableCombination))) {
-                strongestTableCombination = comb;
+                const tableCards = playerState.cards.map(cardData =>
+                    new Card(cardData.value, cardData.suit)
+                );
+
+                const comb = this.cardTable.getCombination(tableCards, this.gameType);
+                if (comb) {
+                    if (strongestTableCombination === null ||
+                        this.cardTable.isStronger(comb, strongestTableCombination)) {
+                        strongestTableCombination = comb;
+                    }
+                }
             }
+        }
+
+        if (!hasOpponentCards) {
+            return true; 
         }
 
         if (strongestTableCombination === null) {
@@ -304,12 +312,6 @@ class LobbyService {
 
         for (const combination of allCombinations) {
             if (this.cardTable.isStronger(combination, strongestTableCombination)) {
-                return true;
-            }
-        }
-
-        for (const combination of allCombinations) {
-            if (combination.type === CombinationType.Rocket) {
                 return true;
             }
         }

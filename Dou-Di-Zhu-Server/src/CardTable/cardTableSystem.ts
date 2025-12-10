@@ -717,6 +717,13 @@ export class CardTable {
         return this.checkNormalCombinations(sortedCards, gameType);
     }
 
+    public getCombinationFromTableCards(tableCards: TableCard[], gameType: number): CardCombination | null {
+        const cards = tableCards.map(cardData =>
+            new Card(cardData.value, cardData.suit)
+        );
+        return this.getCombination(cards, gameType);
+    }
+
     public addCard(playerInfo: PlayerInfo, cards: any[]): void {
         const cardInstances = cards.map(cardData =>
             new Card(cardData.CardValue, cardData.CardSuit)
