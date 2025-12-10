@@ -59,7 +59,7 @@ export class CardTable {
         return true;
     }
 
-    public hasValidCombination(cards: Card[], playerInfo: PlayerInfo, gameType: number, resetState = false): Card[] | null {
+    public hasValidCombination(cards: Card[], playerInfo: PlayerInfo, gameType: number): Card[] | null {
         if (!cards.length) return null;
 
         const playerId = playerInfo.getId();
@@ -70,8 +70,6 @@ export class CardTable {
 
         // Получаем текущее состояние для игрока
         let comboState = this.playerComboState.get(playerId) || 0;
-        
-        comboState = resetState ? 0 : comboState;
 
         // Определяем самую сильную комбинацию на столе
         let strongestTableCombination: CardCombination | null = null;
