@@ -734,7 +734,7 @@ export class CardTable {
     }
 
     private isJokerValue(value: CardValueType): boolean {
-        return value === CardValueType.BlackJoker || value === CardValueType.RedJoker;
+        return value === CardValueType.Joker;
     }
 
     public getCombination(cards: Card[], gameType: number): CardCombination | null {
