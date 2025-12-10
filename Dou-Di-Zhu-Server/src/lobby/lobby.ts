@@ -239,10 +239,10 @@ class LobbyService {
                 };
 
                 if(this.hasLandLord){
-                    handleStartMove(waitPlayerInfo.getWs(), message, waitPlayerInfo.getWss(), currentTickCount, this.moveTime);
+                    handleStartMove(waitPlayerInfo.getWs(), message, waitPlayerInfo.getWss(), currentTickCount, moveTime);
                 }
                 else {
-                    handleRaiseBit(waitPlayerInfo.getWs(), message, waitPlayerInfo.getWss(), currentTickCount, this.moveTime, this.currentBit);
+                    handleRaiseBit(waitPlayerInfo.getWs(), message, waitPlayerInfo.getWss(), currentTickCount, moveTime, this.currentBit);
                 }
 
                 await this.delay(1000);
