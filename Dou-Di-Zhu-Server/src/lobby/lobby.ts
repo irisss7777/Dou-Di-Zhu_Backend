@@ -219,7 +219,8 @@ class LobbyService {
             var currentTickCount = 0;
             var isRaised = false;
             
-            var moveTime = this.cardTable.hasValidCombination(playerInfo.getAllCards(), playerInfo, this.gameType) ? this.moveTime : this.cantMoveTime;
+            var hasValidCombination = this.cardTable.hasValidCombination(playerInfo.getAllCards(), playerInfo, this.gameType);
+            var moveTime = hasValidCombination != null && hasValidCombination.length > 0 ? this.moveTime : this.cantMoveTime;
             var finalMoveTime = this.hasLandLord ? moveTime : this.moveTime;
 
             while (currentTickCount < finalMoveTime && this.lobbyIsActive){
