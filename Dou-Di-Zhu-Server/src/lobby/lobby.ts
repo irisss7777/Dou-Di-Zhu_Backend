@@ -218,10 +218,11 @@ class LobbyService {
         while(this.lobbyIsActive){
             var currentTickCount = 0;
             var isRaised = false;
-
+            
             var moveTime = this.cardTable.hasValidCombination(playerInfo.getAllCards(), playerInfo, this.gameType) ? this.moveTime : this.cantMoveTime;
+            var finalMoveTime = this.hasLandLord ? moveTime : this.moveTime;
 
-            while (currentTickCount < moveTime && this.lobbyIsActive){
+            while (currentTickCount < finalMoveTime && this.lobbyIsActive){
                 currentTickCount++
 
                 if(this.canccelation){
@@ -239,15 +240,15 @@ class LobbyService {
                 };
 
                 if(this.hasLandLord){
-                    handleStartMove(waitPlayerInfo.getWs(), message, waitPlayerInfo.getWss(), currentTickCount, moveTime);
+                    handleStartMove(waitPlayerInfo.getWs(), message, waitPlayerInfo.getWss(), currentTickCount, finalMoveTime);
                 }
                 else {
-                    handleRaiseBit(waitPlayerInfo.getWs(), message, waitPlayerInfo.getWss(), currentTickCount, moveTime, this.currentBit);
+                    handleRaiseBit(waitPlayerInfo.getWs(), message, waitPlayerInfo.getWss(), currentTickCount, this.moveTime, this.currentBit);
                 }
 
                 await this.delay(1000);
 
-                if(currentTickCount >= this.moveTime - 1)
+                if(currentTickCount >= finalMoveTime - 1)
                 {
                     const passMessage: WSMessage = {
                         Type: MessageType.PLAYER_PASS,
