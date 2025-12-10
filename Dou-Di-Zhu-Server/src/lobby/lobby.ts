@@ -219,7 +219,9 @@ class LobbyService {
             var currentTickCount = 0;
             var isRaised = false;
 
-            while (currentTickCount < this.moveTime && this.lobbyIsActive){
+            var moveTime = this.cardTable.hasValidCombination(playerInfo.getAllCards(), playerInfo, this.gameType) ? this.moveTime : this.cantMoveTime;
+
+            while (currentTickCount < moveTime && this.lobbyIsActive){
                 currentTickCount++
 
                 if(this.canccelation){
