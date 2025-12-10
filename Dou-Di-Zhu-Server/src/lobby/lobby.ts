@@ -274,8 +274,49 @@ class LobbyService {
     private canPlayerPlayAnyCard(playerInfo: PlayerInfo, cards: Card[]): boolean {
         if (!cards.length) return false;
 
-        const validCombination = this.cardTable.hasValidCombination(cards, playerInfo, this.gameType);
-        return validCombination !== null;
+        const allCombinations = this.cardTable.getCachedCombinationsForPlayer(playerInfo, this.gameType);
+        if (!allCombinations || allCombinations.length === 0) return false;
+
+        const tableState = this.cardTable.getTableState();
+
+        let hasOpponentCards = false;
+        let strongestTableCombination: CardCombination | null = null;
+
+        for (const playerState of tableState.players) {
+            if (playerState.playerId === playerInfo.getId()) continue;
+
+            if (playerState.cards && playerState.cards.length > 0) {
+                hasOpponentCards = true;
+
+                const tableCards = playerState.cards.map(cardData =>
+                    new Card(cardData.value, cardData.suit)
+                );
+
+                const comb = this.cardTable.getCombination(tableCards, this.gameType);
+                if (comb) {
+                    if (strongestTableCombination === null ||
+                        this.cardTable.isStronger(comb, strongestTableCombination)) {
+                        strongestTableCombination = comb;
+                    }
+                }
+            }
+        }
+
+        if (!hasOpponentCards) {
+            return true; 
+        }
+
+        if (strongestTableCombination === null) {
+            return true;
+        }
+
+        for (const combination of allCombinations) {
+            if (this.cardTable.isStronger(combination, strongestTableCombination)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public raiseBit(playerId : string) : void{
