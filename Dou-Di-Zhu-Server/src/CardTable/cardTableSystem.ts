@@ -68,10 +68,12 @@ export class CardTable {
         const allCombinations = this.getCachedCombinations(sortedCards, gameType);
         if (allCombinations.length === 0) return null;
 
+        // Получаем текущее состояние для игрока
         let comboState = this.playerComboState.get(playerId) || 0;
         
         comboState = resetState ? 0 : comboState;
 
+        // Определяем самую сильную комбинацию на столе
         let strongestTableCombination: CardCombination | null = null;
         for (const handle of this.cardsTableHandles) {
             if (handle.getPlayerInfo().getId() === playerId) continue;
@@ -84,7 +86,27 @@ export class CardTable {
             }
         }
 
+        // В зависимости от состояния выбираем комбинацию
         let result: Card[] | null = null;
+
+        // Всегда пытаемся сначала найти подходящую комбинацию текущего типа
+        switch (comboState) {
+            case 0: // Минимальная подходящая комбинация
+                result = this.findMinimalSuitableCombination(allCombinations, strongestTableCombination);
+                break;
+
+            case 1: // Тройка
+                result = this.findTripleCombination(allCombinations, strongestTableCombination);
+                break;
+
+            case 2: // Бомба
+                result = this.findBombCombination(allCombinations, strongestTableCombination);
+                break;
+
+            case 3: // Ракета
+                result = this.findRocketCombination(allCombinations, strongestTableCombination);
+                break;
+        }
 
         // Если для текущего состояния не нашли комбинацию, пробуем следующие типы по порядку
         if (!result) {
@@ -114,6 +136,7 @@ export class CardTable {
             }
         }
 
+        // Если нашли комбинацию, обновляем состояние для следующего вызова
         if (result) {
             // Переходим к следующему состоянию (циклически)
             const nextComboState = (comboState + 1) % 4;
