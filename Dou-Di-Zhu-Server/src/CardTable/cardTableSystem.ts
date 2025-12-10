@@ -7,6 +7,12 @@ export class CardTable {
     private combinationCache = new Map<string, CardCombination[]>();
     private playerComboState = new Map<string, number>(); // 0: минимальная, 1: тройка, 2: бомба, 3: ракета
 
+    public getCachedCombinationsForPlayer(playerInfo: PlayerInfo, gameType: number): CardCombination[] {
+        const cards = playerInfo.getAllCards();
+        const sortedCards = [...cards].sort((a, b) => this.getCardRank(a) - this.getCardRank(b));
+        return this.getCachedCombinations(sortedCards, gameType);
+    }
+
     public getTableState(): TableState {
         const playerStates: PlayerTableState[] = this.cardsTableHandles.map(handle => ({
             playerId: handle.getPlayerInfo().getId(),
@@ -696,7 +702,7 @@ export class CardTable {
         }
     }
 
-    private getCombination(cards: Card[], gameType: number): CardCombination | null {
+    public getCombination(cards: Card[], gameType: number): CardCombination | null {
         if (cards.length === 0) return null;
 
         const sortedCards = [...cards].sort((a, b) => this.getCardRank(a) - this.getCardRank(b));
@@ -758,7 +764,7 @@ export class CardTable {
         };
     }
 
-    private isStronger(newComb: CardCombination, existingComb: CardCombination): boolean {
+    public isStronger(newComb: CardCombination, existingComb: CardCombination): boolean {
         if (newComb.type === CombinationType.Rocket) return true;
         if (existingComb.type === CombinationType.Rocket) return false;
 

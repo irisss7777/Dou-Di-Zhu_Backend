@@ -4,7 +4,7 @@ import { logger } from '../utils/logger';
 import { getConnectedUsersCount, broadcastToAll } from '../utils/broadcast';
 import {Card, CardHolder } from "../cards/cardSystem";
 import { handleStartMove } from  "../Websocket/Handlers/startMove.handler"
-import { CardTable, TableState } from "../CardTable/cardTableSystem";
+import {CardCombination, CardTable, CombinationType, TableState } from "../CardTable/cardTableSystem";
 import { handleRaiseBit } from "../Websocket/Handlers/raiseBit.handle";
 import { handleChangeSkin } from "../Websocket/Handlers/changeSkin.handler";
 import { handleAddCard } from "../Websocket/Handlers/addCard.handler";
@@ -211,24 +211,22 @@ class LobbyService {
         return 0;
     }
 
-    private async waitForNextMove(playerInfo : PlayerInfo)
-    {
+    private async waitForNextMove(playerInfo: PlayerInfo) {
         var waitPlayerInfo = playerInfo;
-        
-        while(this.lobbyIsActive){
+
+        while (this.lobbyIsActive) {
             var currentTickCount = 0;
             var isRaised = false;
             
-            var hasValidCombination = this.cardTable.hasValidCombination(playerInfo.getAllCards(), playerInfo, this.gameType);
-            var moveTime = hasValidCombination != null ? this.moveTime : this.cantMoveTime;
-            if(hasValidCombination != null)
-                moveTime = hasValidCombination?.length > 0 ?  this.moveTime : this.cantMoveTime;
+            const playerCards = playerInfo.getAllCards();
+            const canPlayAnyCard = this.canPlayerPlayAnyCard(playerInfo, playerCards);
+            var moveTime = canPlayAnyCard ? this.moveTime : this.cantMoveTime;
             var finalMoveTime = this.hasLandLord ? moveTime : this.moveTime;
 
-            while (currentTickCount < finalMoveTime && this.lobbyIsActive){
-                currentTickCount++
+            while (currentTickCount < finalMoveTime && this.lobbyIsActive) {
+                currentTickCount++;
 
-                if(this.canccelation){
+                if (this.canccelation) {
                     this.canccelation = false;
                     isRaised = true;
                     break;
@@ -242,21 +240,18 @@ class LobbyService {
                     },
                 };
 
-                if(this.hasLandLord){
+                if (this.hasLandLord) {
                     handleStartMove(waitPlayerInfo.getWs(), message, waitPlayerInfo.getWss(), currentTickCount, finalMoveTime);
-                }
-                else {
+                } else {
                     handleRaiseBit(waitPlayerInfo.getWs(), message, waitPlayerInfo.getWss(), currentTickCount, this.moveTime, this.currentBit);
                 }
 
                 await this.delay(1000);
 
-                if(currentTickCount >= finalMoveTime - 1)
-                {
+                if (currentTickCount >= finalMoveTime - 1) {
                     const passMessage: WSMessage = {
                         Type: MessageType.PLAYER_PASS,
-                        Data: {
-                        },
+                        Data: {},
                     };
                     handleUserPass(waitPlayerInfo.getWs(), passMessage, waitPlayerInfo.getWss());
                 }
@@ -264,16 +259,62 @@ class LobbyService {
 
             this.currentPlayerNumber++;
 
-            if(this.currentPlayerNumber >=  this.connectedPlayers.length)
+            if (this.currentPlayerNumber >= this.connectedPlayers.length)
                 this.currentPlayerNumber = 0;
 
             var currentPlayer = undefined;
-            if(this.connectedPlayers[this.currentPlayerNumber] != undefined)
+            if (this.connectedPlayers[this.currentPlayerNumber] != undefined)
                 currentPlayer = this.connectedPlayers[this.currentPlayerNumber];
 
-            if(currentPlayer != undefined)
+            if (currentPlayer != undefined)
                 waitPlayerInfo = currentPlayer;
         }
+    }
+
+    private canPlayerPlayAnyCard(playerInfo: PlayerInfo, cards: Card[]): boolean {
+        if (!cards.length) return false;
+
+        const tableState = this.cardTable.getTableState();
+
+        if (tableState.totalCardsOnTable === 0) {
+            return true;
+        }
+
+        const allCombinations = this.cardTable.getCachedCombinationsForPlayer(playerInfo, this.gameType);
+        if (!allCombinations || allCombinations.length === 0) return false;
+        
+        let strongestTableCombination: CardCombination | null = null;
+        for (const playerState of tableState.players) {
+            if (playerState.playerId === playerInfo.getId()) continue;
+
+            const tableCards = playerState.cards.map(cardData =>
+                new Card(cardData.value, cardData.suit)
+            );
+
+            const comb = this.cardTable.getCombination(tableCards, this.gameType);
+            if (comb && (strongestTableCombination === null ||
+                this.cardTable.isStronger(comb, strongestTableCombination))) {
+                strongestTableCombination = comb;
+            }
+        }
+
+        if (strongestTableCombination === null) {
+            return true;
+        }
+
+        for (const combination of allCombinations) {
+            if (this.cardTable.isStronger(combination, strongestTableCombination)) {
+                return true;
+            }
+        }
+
+        for (const combination of allCombinations) {
+            if (combination.type === CombinationType.Rocket) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public raiseBit(playerId : string) : void{
