@@ -47,6 +47,7 @@ class PlayerInfo {
     private cards: Card[] = [];
     private bitCount : number;
     private isLandLord : boolean = false;
+    private landLordPassed : boolean = false;
 
     constructor(playerId: string, playerName: string, ws: CustomWebSocket, wss: WebSocketServer, skin = 0, landlordSkin = 2, bitCount = 0) {
         this.playerId = playerId;
@@ -112,6 +113,14 @@ class PlayerInfo {
     public setLandlordStatus() : void{
         this.isLandLord = true;
         this.skin = 2;
+    }
+    
+    public landLordPass() : void{
+        this.landLordPassed = true;
+    }
+    
+    public getLandLordPassStatus() : boolean{
+        return this.landLordPassed;
     }
 }
 
@@ -225,6 +234,9 @@ class LobbyService {
 
             while (currentTickCount < finalMoveTime && this.lobbyIsActive) {
                 currentTickCount++;
+                
+                if(this.connectedPlayers[this.currentPlayerNumber].getLandLordPassStatus() && !this.hasLandLord)
+                    currentTickCount = finalMoveTime;
 
                 if (this.canccelation) {
                     this.canccelation = false;
@@ -298,6 +310,7 @@ class LobbyService {
     }
 
     public passRaiseByPlayer(playerId : string) : void{
+        this.getPlayerInfo(playerId)?.landLordPass();
         this.pass(playerId);
         this.passRaiseBit();
     }
