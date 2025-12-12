@@ -55,18 +55,27 @@ export const handleUseCard = async (
 
                 var jsonResponseWin = JSON.stringify(responseWin);
                 ws.send(jsonResponseWin);
+                
+                var winPlayer = lobbyResult?.getPlayerInfo(ws.userId);
+                var allPlayerInfos = lobbyResult?.getAllPlayers();
 
-                const broadcastMessageLose: WSMessage = {
-                    Type: MessageType.GAME_STATE,
-                    Data: {
-                        UserId: ws.userId,
-                        UserName: ws.userName,
-                        LobbyId: lobbyId,
-                        Win: false,
-                    },
-                };
+                allPlayerInfos.forEach((player) => {
+                    if(player.getId() != ws.userId)
+                    {
+                        const broadcastMessage: WSMessage = {
+                            Type: MessageType.GAME_STATE,
+                            Data: {
+                                UserId: ws.userId,
+                                UserName: ws.userName,
+                                LobbyId: lobbyId,
+                                Win: winPlayer?.getLandLordStatus() ? false : player.getLandLordStatus() ? false : true,
+                            },
+                        };
 
-                broadcastToAll(wss, broadcastMessageLose, ws, lobbyId);
+                        var jsonResponseOther = JSON.stringify(broadcastMessage);
+                        ws.send(jsonResponseOther);
+                    }
+                })
 
                 wss.clients.forEach((client) => {
                     if (client.readyState === client.OPEN) {

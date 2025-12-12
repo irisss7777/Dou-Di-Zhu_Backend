@@ -122,6 +122,10 @@ class PlayerInfo {
     public getLandLordPassStatus() : boolean{
         return this.landLordPassed;
     }
+    
+    public getLandLordStatus() : boolean{
+        return this.isLandLord;
+    }
 }
 
 class LobbyService {
