@@ -236,7 +236,7 @@ class LobbyService {
                 currentTickCount++;
                 
                 if(this.connectedPlayers[this.currentPlayerNumber].getLandLordPassStatus() && !this.hasLandLord)
-                    currentTickCount = finalMoveTime;
+                    break;
 
                 if (this.canccelation) {
                     this.canccelation = false;
