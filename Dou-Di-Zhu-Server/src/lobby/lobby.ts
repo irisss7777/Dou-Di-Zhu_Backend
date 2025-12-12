@@ -373,6 +373,11 @@ class LobbyService {
             if(this.lobbyIsStarted)
                 return false;
             
+            this.connectedPlayers.forEach((player) =>{
+                if(player.getName() == playerName)
+                    return false;
+            })
+            
             if(gameType != this.gameType)
                 return false;
             
