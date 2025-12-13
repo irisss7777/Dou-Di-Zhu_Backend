@@ -11,6 +11,7 @@ export const handleAddCard = async (
     wss: WebSocketServer,
     cardCount: number,
     targetAdd = false,
+    removeOld = false,
 ) => {
     const { Data } = message;
 
@@ -32,6 +33,7 @@ export const handleAddCard = async (
                 UserName: ws.userName,
                 LobbyId: lobbyId,
                 CardData: cards,
+                RemoveOldCard: removeOld,
             },
         };
 
@@ -77,6 +79,7 @@ export const handleAddCard = async (
                         UserName: customClient.userName,
                         LobbyId: lobbyId,
                         CardData: cards,
+                        RemoveOldCard: removeOld,
                     },
                 };
 

@@ -48,6 +48,7 @@ class PlayerInfo {
     private bitCount : number;
     private isLandLord : boolean = false;
     private landLordPassed : boolean = false;
+    private bitIsRaised : boolean = false;
 
     constructor(playerId: string, playerName: string, ws: CustomWebSocket, wss: WebSocketServer, skin = 0, landlordSkin = 2, bitCount = 0) {
         this.playerId = playerId;
@@ -104,6 +105,11 @@ class PlayerInfo {
 
     public raiseBit(currentBit : number) : void{
         this.bitCount = currentBit;
+        this.bitIsRaised = true;
+    }
+    
+    public getBitIsRaised() : boolean{
+        return this.bitIsRaised;
     }
     
     public getBit() : number{
@@ -115,8 +121,8 @@ class PlayerInfo {
         this.skin = 2;
     }
     
-    public landLordPass() : void{
-        this.landLordPassed = true;
+    public landLordPass(passed : boolean) : void{
+        this.landLordPassed = passed;
     }
     
     public getLandLordPassStatus() : boolean{
@@ -125,6 +131,10 @@ class PlayerInfo {
     
     public getLandLordStatus() : boolean{
         return this.isLandLord;
+    }
+    
+    public clearCard() : void{
+        this.cards = [];
     }
 }
 
@@ -324,7 +334,7 @@ class LobbyService {
         if(this.connectedPlayers[this.currentPlayerNumber].getId() != playerId)
             return;
         
-        this.getPlayerInfo(playerId)?.landLordPass();
+        this.getPlayerInfo(playerId)?.landLordPass(true);
         this.pass(playerId);
         this.passRaiseBit();
     }
@@ -332,20 +342,37 @@ class LobbyService {
     private passRaiseBit(): void {
         this.currentBitPassed++;
 
-        if (this.currentBitPassed >= 2) {
-            this.hasLandLord = true;
-            
+        if (this.currentBitPassed >= 3) {
             this.getAllPlayers().forEach((player) => {
-                if(!player.getLandLordPassStatus())
+                player.clearCard();
+
+                const message: WSMessage = {
+                    Type: MessageType.ADD_CARD,
+                    Data: {
+                    }
+                }
+
+                handleAddCard(player.getWs(), message, player.getWss(), 17, false, true);
+
+                player.landLordPass(false);
+            });
+
+            this.currentBitPassed = 0;
+        }
+        if (this.currentBitPassed >= 2) {
+            this.getAllPlayers().forEach((player) => {
+                if(!player.getLandLordPassStatus() && player.getBitIsRaised())
                 {
+                    this.hasLandLord = true;
+
                     const message: WSMessage = {
                         Type: MessageType.ADD_CARD,
                         Data: {
                         }
                     }
-
                     handleAddCard(player.getWs(), message, player.getWss(), 3, true);
                     player.setLandlordStatus();
+
                     this.onLandlordSetted();
                 }
             });
