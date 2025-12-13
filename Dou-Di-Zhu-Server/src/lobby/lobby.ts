@@ -342,30 +342,30 @@ class LobbyService {
     private passRaiseBit(): void {
         this.currentBitPassed++;
 
-        if (this.currentBitPassed >= 3) {
-            this.getAllPlayers().forEach((playerForClear) => {
-                playerForClear.clearCard();
-            });
-            
-            this.cardHolder.initHolder();
-            
-            this.getAllPlayers().forEach((player) => {
-                const message: WSMessage = {
-                    Type: MessageType.ADD_CARD,
-                    Data: {
-                    }
-                }
-
-                handleAddCard(player.getWs(), message, player.getWss(), 17, true, true);
-
-                player.landLordPass(false);
-            });
-
-            this.currentBitPassed = 0;
-        }
+        // if (this.currentBitPassed >= 3) {
+        //     this.getAllPlayers().forEach((playerForClear) => {
+        //         playerForClear.clearCard();
+        //     });
+        //    
+        //     this.cardHolder.initHolder();
+        //    
+        //     this.getAllPlayers().forEach((player) => {
+        //         const message: WSMessage = {
+        //             Type: MessageType.ADD_CARD,
+        //             Data: {
+        //             }
+        //         }
+        //
+        //         handleAddCard(player.getWs(), message, player.getWss(), 17, true, true);
+        //
+        //         player.landLordPass(false);
+        //     });
+        //
+        //     this.currentBitPassed = 0;
+        // }
         if (this.currentBitPassed >= 2) {
             this.getAllPlayers().forEach((player) => {
-                if(!player.getLandLordPassStatus() && player.getBitIsRaised())
+                if(!player.getLandLordPassStatus())
                 {
                     this.hasLandLord = true;
 
