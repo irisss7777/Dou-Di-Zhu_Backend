@@ -318,6 +318,12 @@ class LobbyService {
     }
 
     public passRaiseByPlayer(playerId : string) : void{
+        if(this.canccelation)
+            return;
+
+        if(this.connectedPlayers[this.currentPlayerNumber].getId() != playerId)
+            return;
+        
         this.getPlayerInfo(playerId)?.landLordPass();
         this.pass(playerId);
         this.passRaiseBit();
