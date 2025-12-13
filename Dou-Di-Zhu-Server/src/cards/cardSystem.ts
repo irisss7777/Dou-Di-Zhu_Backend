@@ -2,7 +2,9 @@ export class CardHolder
 {
     private cards: Card[] = [];
 
-    public  initHolder() {
+    public initHolder() {
+        this.cards = [];
+        
         this.cards.push(new Card(0, 0));
         this.cards.push(new Card(0, 1));
         this.cards.push(new Card(0, 2));

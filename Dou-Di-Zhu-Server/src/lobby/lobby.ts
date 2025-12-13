@@ -343,9 +343,13 @@ class LobbyService {
         this.currentBitPassed++;
 
         if (this.currentBitPassed >= 3) {
+            this.getAllPlayers().forEach((playerForClear) => {
+                playerForClear.clearCard();
+            });
+            
+            this.cardHolder.initHolder();
+            
             this.getAllPlayers().forEach((player) => {
-                player.clearCard();
-
                 const message: WSMessage = {
                     Type: MessageType.ADD_CARD,
                     Data: {
