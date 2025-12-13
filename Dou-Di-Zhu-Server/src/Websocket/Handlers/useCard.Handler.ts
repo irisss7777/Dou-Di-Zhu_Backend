@@ -12,6 +12,11 @@ export const handleUseCard = async (
     wss: WebSocketServer,
 ) => {
     const {Data} = message;
+    
+    if(ws.socketIsBlocked)
+        return;
+
+    ws.socketIsBlocked  = true;
 
     const lobbyResult = await lobbyHandler.getPlayerLobby(ws.userId);
     var lobbyId = lobbyResult?.getLobbyId();
@@ -123,5 +128,13 @@ export const handleUseCard = async (
             var jsonResponse = JSON.stringify(response);
             ws.send(jsonResponse);
         }
+
+        await delay(1000);
+
+        ws.socketIsBlocked = false
+    }
+
+    function delay(ms: number): Promise<void> {
+        return new Promise(resolve => setTimeout(resolve, ms));
     }
 }

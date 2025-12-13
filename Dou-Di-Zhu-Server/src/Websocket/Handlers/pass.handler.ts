@@ -11,6 +11,9 @@ export const handleUserPass = async(
 ) => {
     const { Data } = message;
 
+    if(ws.socketIsBlocked)
+        return;
+
     logger.info('User pass',
         {
             userId: ws.userId,
