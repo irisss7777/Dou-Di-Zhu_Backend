@@ -322,38 +322,21 @@ class LobbyService {
 
         if (this.currentBitPassed >= 2) {
             this.hasLandLord = true;
-
-            let landlordCandidate: PlayerInfo | null = null;
-
-            let allZeroBits = true;
-            for (const player of this.connectedPlayers) {
-                if (player.getBit() > 0) {
-                    allZeroBits = false;
-                    break;
-                }
-            }
-
-            if (allZeroBits) {
-                landlordCandidate = this.connectedPlayers[0] || null;
-            } else {
-                for (const player of this.connectedPlayers) {
-                    if (!landlordCandidate || player.getBit() > landlordCandidate.getBit()) {
-                        landlordCandidate = player;
+            
+            this.getAllPlayers().forEach((player) => {
+                if(!player.getLandLordPassStatus())
+                {
+                    const message: WSMessage = {
+                        Type: MessageType.ADD_CARD,
+                        Data: {
+                        }
                     }
-                }
-            }
 
-            if (landlordCandidate) {
-                const message: WSMessage = {
-                    Type: MessageType.ADD_CARD,
-                    Data: {
-                    }
+                    handleAddCard(player.getWs(), message, player.getWss(), 3, true);
+                    player.setLandlordStatus();
+                    this.onLandlordSetted();
                 }
-
-                handleAddCard(landlordCandidate.getWs(), message, landlordCandidate.getWss(), 3, true);
-                landlordCandidate.setLandlordStatus();
-                this.onLandlordSetted();
-            }
+            });
         }
     }
     
