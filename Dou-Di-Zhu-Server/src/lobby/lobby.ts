@@ -306,6 +306,9 @@ class LobbyService {
         if(this.connectedPlayers[this.currentPlayerNumber].getId() != playerId)
             return;
         
+        if(this.canccelation)
+            return;
+        
         this.currentBit += 20;
 
         const player = this.connectedPlayers.find(player => player.getId() === playerId);
