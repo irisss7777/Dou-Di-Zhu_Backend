@@ -356,7 +356,7 @@ class LobbyService {
                     }
                 }
 
-                handleAddCard(player.getWs(), message, player.getWss(), 17, false, true);
+                handleAddCard(player.getWs(), message, player.getWss(), 17, true, true);
 
                 player.landLordPass(false);
             });
