@@ -32,4 +32,5 @@ export interface CustomWebSocket extends WebSocket {
     userName?: string;
     lobbyId?: string;
     isAlive: boolean;
+    isConnected : boolean,
 }

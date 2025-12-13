@@ -14,6 +14,9 @@ export const handleUserJoin = async(
     
     var gameType : number = Data.GameType;
     
+    if(ws.isConnected)
+        return;
+    
     if (!ws.userId) {
         ws.userId = generateUserId();
     }
@@ -103,6 +106,8 @@ export const handleUserJoin = async(
     }
 
     broadcastToAll(wss, broadcastMessage, ws, lobbyResult.lobbyId);
+
+    ws.isConnected = true;
 };
 
 const generateUserId = (): string => {
