@@ -16,7 +16,6 @@ export const handleUseCard = async (
     if(ws.socketIsBlocked)
     {
         logger.info("Try spammed!!");
-        ws.close(0, "Spam");
         return;
     }
 
