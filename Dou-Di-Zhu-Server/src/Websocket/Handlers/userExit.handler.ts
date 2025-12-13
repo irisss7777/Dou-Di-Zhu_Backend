@@ -15,6 +15,8 @@ export const handleUserLeave = async(
         {
             userId: ws.userId,
         });
+
+    ws.isConnected = false;
     
     const lobbyResult= await lobbyHandler.disconnectPlayer(ws.userId);
     

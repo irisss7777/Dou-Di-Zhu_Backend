@@ -11,6 +11,8 @@ export const handleBitIsRaised = async(
 ) => {
     const { Data } = message;
 
+    ws.cosketIsBlocked = true;
+
     logger.info('Bit raise',
         {
             userId: ws.userId,
@@ -19,5 +21,4 @@ export const handleBitIsRaised = async(
     const lobbyResult = await lobbyHandler.getPlayerLobby(ws.userId);
 
     lobbyResult?.raiseBit(ws.userId);
-    
 }

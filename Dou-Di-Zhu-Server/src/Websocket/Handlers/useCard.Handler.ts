@@ -87,6 +87,7 @@ export const handleUseCard = async (
                         }
 
                         lobbyResult.disconnectPlayer(customClient.userId);
+                        customClient.isConnected = false;
                     }
                 });
             }

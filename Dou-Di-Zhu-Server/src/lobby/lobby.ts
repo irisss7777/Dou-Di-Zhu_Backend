@@ -303,6 +303,9 @@ class LobbyService {
     }
 
     public raiseBit(playerId : string) : void{
+        if(this.connectedPlayers[this.currentPlayerNumber].getId() != playerId)
+            return;
+        
         this.currentBit += 20;
 
         const player = this.connectedPlayers.find(player => player.getId() === playerId);
