@@ -59,23 +59,24 @@ export const handleUseCard = async (
                 var winPlayer = lobbyResult?.getPlayerInfo(ws.userId);
                 var allPlayerInfos = lobbyResult?.getAllPlayers();
 
-                allPlayerInfos.forEach((player) => {
-                    if(player.getId() != ws.userId)
-                    {
+                wss.clients.forEach((client) => {
+                    if (client.readyState === client.OPEN) {
+                        const customClient = client as CustomWebSocket;
+                        
                         const broadcastMessage: WSMessage = {
                             Type: MessageType.GAME_STATE,
                             Data: {
                                 UserId: ws.userId,
                                 UserName: ws.userName,
                                 LobbyId: lobbyId,
-                                Win: winPlayer?.getLandLordStatus() ? false : player.getLandLordStatus() ? false : true,
+                                Win: winPlayer?.getLandLordStatus() ? false : lobbyResult?.getPlayerInfo(customClient.userId)?.getLandLordStatus() ? false : true,
                             },
                         };
 
                         var jsonResponseOther = JSON.stringify(broadcastMessage);
-                        ws.send(jsonResponseOther);
+                        client.send(jsonResponseOther);
                     }
-                })
+                });
 
                 wss.clients.forEach((client) => {
                     if (client.readyState === client.OPEN) {
