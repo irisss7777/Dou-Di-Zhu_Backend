@@ -14,7 +14,11 @@ export const handleUseCard = async (
     const {Data} = message;
     
     if(ws.socketIsBlocked)
+    {
+        logger.info("Try spammed!!");
+        ws.close(0, "Spam");
         return;
+    }
 
     ws.socketIsBlocked  = true;
 
